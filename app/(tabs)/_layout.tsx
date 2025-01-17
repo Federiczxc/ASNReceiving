@@ -5,24 +5,33 @@ export default function BotTab() {
         <Tabs
             screenOptions={{
                 tabBarActiveTintColor: '#ffd33d',
-                headerStyle: {
+                headerStyle: { //top
                     backgroundColor: '#25292e',
                 },
                 headerShadowVisible: false,
                 headerTintColor: '#fff',
-                tabBarStyle: {
+                tabBarStyle: {   //Navbar
                     backgroundColor: '#25292e',
                 }
             }}>
-            <Tabs.Screen name="index" options={{
-                title: 'Log in', tabBarIcon: ({ color, focused }) => (
-                    <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
+            
+            <Tabs.Screen name="profile" options={{
+                title: 'My Profile',
+                tabBarIcon: ({ color, focused }) => (
+                    <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} color={color} size={24} />
                 ),
-            }} />
-            <Tabs.Screen name="trip_list" options={{
+            }}/>
+             <Tabs.Screen name="trip_list" options={{
                 title: 'Trip List',
                 tabBarIcon: ({ color, focused }) => (
-                    <Ionicons name={focused ? 'information-circle' : 'information-circle-outline'} color={color} size={24} />
+                    <Ionicons name={focused ? 'navigate' : 'navigate-outline'} color={color} size={24} />
+                ),
+                headerShown: false,
+            }}/>
+            <Tabs.Screen name="trip_list2" options={{
+                title: 'OCR',
+                tabBarIcon: ({ color, focused }) => (
+                    <Ionicons name={focused ? 'aperture' : 'aperture-outline'} color={color} size={24} />
                 ),
             }}
             />
