@@ -21,6 +21,18 @@ export default function RootLayout() {
           title: '', // Set the title here
         }}
       />
+      <Stack.Screen
+        name="trip_list_details/[id]"
+        options={{
+          title: 'Trip Details', // Set the title here
+        }}
+      />
+      <Stack.Screen
+        name="trip_list_branch/[id]"
+        options={{
+          title: 'Trip Branch', // Set the title here
+        }}
+      />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );

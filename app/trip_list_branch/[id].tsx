@@ -1,31 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
-import axios from 'axios';
+import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
-import { useRouter } from 'expo-router';
-interface Trip {
-    trip_ticket_id: number;
-    plate_no: string;
-    remarks: string;
-    entity_name: string;
-    asst_entity_name: string;
-    dispatcher: string;
+
+interface TripBranch {
+   branch_id:number;
+   branch_name:string;
 }
 
-export default function TripList() {
-    const [tripData, setTripData] = useState<Trip[]>([]);
+
+export default function TripBranch() {
+    const { id } = useLocalSearchParams(); // Access route params
+    const [tripBranch, setTripBranch] = useState<TripBranch[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const router = useRouter();
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await api.get('/triplist/');
-                setTripData(response.data.triplist);
+                const response = await api.get('/tripbranch/', {
+                    params: { id }
+                });
+                setTripBranch(response.data.tripbranch);
                 setLoading(false);
-                console.log(response.data.triplist);
+                console.log("tite", response.data.tripbranch);
             } catch (error) {
                 console.error(error);
                 setLoading(false);
@@ -34,9 +33,8 @@ export default function TripList() {
 
         fetchData();
     }, []);
-
-    const filteredTrips = tripData.filter((trip) =>
-        trip.trip_ticket_id.toString().includes(searchQuery));
+    const filteredTrips = tripBranch.filter((trip) =>
+        trip.branch_id.toString().includes(searchQuery));
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -62,59 +60,25 @@ export default function TripList() {
             </View>
         );
     }
-
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Trip List</Text>
-            <TextInput
-                style={styles.searchBar}
-                placeholder="Search by Trip ID"
-                keyboardType="numeric"
-                value={searchQuery}
-                onChangeText={(text) => {
-                    setSearchQuery(text);
-                    setCurrentPage(1); // Reset to first page on new search
-                }}
-            />
+            <Text style={styles.title}>Trip Ticket ID: {id}</Text>
             <FlatList
                 data={currentItems}
-                keyExtractor={item => item.trip_ticket_id.toString()}
                 renderItem={({ item }) => (
-                    <TouchableOpacity
-                        onPress={() =>
-                            router.push({
-                                pathname: '/trip_list_branch/[id]',
-                                params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
-                            })
-                        }
-                    >
-                        <View style={styles.ticketContainer}>
-                            <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id}</Text>
-                            </View>
-                            <View style={styles.ticketBody}>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Plate No:</Text>
-                                    <Text style={styles.value}>{item.plate_no}</Text>
-                                </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Driver:</Text>
-                                    <Text style={styles.value}>{item.entity_name}</Text>
-                                </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Asst. Driver:</Text>
-                                    <Text style={styles.value}>{item.asst_entity_name}</Text>
-                                </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Dispatched by:</Text>
-                                    <Text style={styles.value}>{item.dispatcher}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.ticketFooter}>
-                                <Text style={styles.footerText} >Remarks: {item.remarks}</Text>
+                    <View style={styles.ticketContainer}>
+                        <View style={styles.ticketHeader}>
+                            <Text style={styles.tripId}> Branch ID: {item.branch_id}</Text>
+                        </View>
+                        <View style={styles.ticketBody}>
+                            
+                            <View style={styles.infoSection}>
+                                <Text style={styles.label}>Branch Name</Text>
+                                <Text style={styles.value}>{item.branch_name}</Text>
                             </View>
                         </View>
-                    </TouchableOpacity>
+                      
+                    </View>
                 )}
             />
             <View style={styles.paginationButtons}>

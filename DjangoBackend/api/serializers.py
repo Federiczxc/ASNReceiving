@@ -55,3 +55,14 @@ class TripTicketSerializer(serializers.ModelSerializer):
 class TripDriverSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripDriverModel
+        fields = '__all__'
+
+class TripDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TripDetailsModel
+        fields = '__all__'
+        
+class TripBranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TripBranchModel
+        fields = '__all__'

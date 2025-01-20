@@ -52,6 +52,7 @@ class TripTicketModel(models.Model):
     asst_entity_id = models.BigIntegerField()
     trip_ticket_date = models.DateTimeField()
     trip_ticket_delivery_type_id = models.BigIntegerField()
+    dispatched_by = models.BigIntegerField()
     remarks = models.TextField()
 
     class Meta:
@@ -59,9 +60,33 @@ class TripTicketModel(models.Model):
         managed = False
 
 class TripDriverModel(models.Model):
-    entity_id = models.BigIntegerField()
+    entity_id = models.BigIntegerField(primary_key=True)
     entity_name = models.CharField(max_length=255)
+    
     
     class Meta:
         db_table = 'fin_mf_entity'
+        managed = False
+
+    
+class TripDetailsModel(models.Model):
+    trip_ticket_id = models.BigIntegerField(primary_key=True)
+    branch_id = models.BigIntegerField()
+    full_address = models.TextField()
+    trans_name = models.CharField(max_length=255)
+    remarks = models.TextField()
+    branch_charges = models.DecimalField(max_digits=18, decimal_places=2)
+    document_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    
+    
+    class Meta:
+        db_table = 'scm_tr_trip_ticket_detail'
+        managed = False
+
+class TripBranchModel(models.Model):
+    branch_id = models.BigIntegerField(primary_key=True)
+    branch_name = models.CharField(max_length=255)
+    
+    class Meta:
+        db_table = 'fin_mf_branch'
         managed = False

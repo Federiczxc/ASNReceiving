@@ -71,18 +71,81 @@ class TripListView(APIView):
         triplist = trip_serializer.data
         
         tripdriver = tripdriver_serializer.data
-        entity_id_to_name = {driver['entity_id']: driver['entity_name'] for driver in tripdriver}
-        for driver in tripdriver: 
-            driver['entity_name'] = entity_id_to_name.get(driver['entity_id'], '') 
-            driver['asst_entity_name'] = entity_id_to_name.get(driver['asst_entity_id'], '')
-        response_data = {
-            'triplist': trip_serializer.data,
-            'tripdriver': tripdriver_serializer.data,
-        }
-        
-        return Response(response_data)
+        tripdriver_mapping = {driver['entity_id']: driver['entity_name'] for driver in tripdriver_serializer.data}
 
+        triplist = []
+        for trip in trip_serializer.data:
+            trip['entity_name'] = tripdriver_mapping.get(trip['entity_id'], '')
+            trip['asst_entity_name'] = tripdriver_mapping.get(trip['asst_entity_id'], '')
+            trip['dispatcher'] = tripdriver_mapping.get(trip['dispatched_by'], '')
+            triplist.append(trip)
+
+        response_data = {
+            'triplist': triplist,
+        }
+
+        return Response(response_data)
+class TripBranchView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        trip_ticket_id = request.query_params.get('id')
+        if not trip_ticket_id:  
+            return Response({"error": "ID is required."}, status=400)
+        
+        try:
+            tripdetail_data = TripDetailsModel.objects.using('trips').filter(trip_ticket_id=trip_ticket_id)
+            
+            if not tripdetail_data.exists():
+                return Response({"error": "Trip ticket not found."}, status=404)
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=400)
+        
+        tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
+        tripdetails = tripdetail_serializer.data
+
+        branch_ids = list(set([detail['branch_id'] for detail in tripdetails]))
+
+        branch_data = TripBranchModel.objects.using('trips').filter(branch_id__in=branch_ids)  
+        branch_serializer = TripBranchSerializer(branch_data, many=True)
+
+        branch_mapping = {branch['branch_id']: branch['branch_name'] for branch in branch_serializer.data}
+        for detail in tripdetails:
+            detail['branch_name'] = branch_mapping.get(detail['branch_id'], 'Unknown')
+
+        response_data = {
+            'tripbranch': tripdetails,  
+        }
+        return Response(response_data)
+class TripDetailView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        trip_ticket_id = request.query_params.get('id')  # Use `id` as the query parameter
+        if trip_ticket_id:
+            try:
+                # Filter by trip_ticket_id
+                tripdetail_data = TripDetailsModel.objects.using('trips').filter(trip_ticket_id=trip_ticket_id)
+                
+                # If no records found, return a 404
+                if not tripdetail_data.exists():
+                    return Response({"error": "Trip ticket not found."}, status=404)
+            except ValueError:
+                return Response({"error": "Invalid ID format."}, status=400)
+        else:
+            return Response({"error": "ID is required."}, status=400)
+        
+        tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
+        
+        response_data = {
+            'tripdetails': tripdetail_serializer.data,
+        }
+
+        return Response(response_data)
+    
 class OCRView(APIView):
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         file = request.FILES.get('image')
         if not file:
