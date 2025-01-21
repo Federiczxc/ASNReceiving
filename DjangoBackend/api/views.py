@@ -109,25 +109,26 @@ class TripBranchView(APIView):
         branch_data = TripBranchModel.objects.using('trips').filter(branch_id__in=branch_ids)  
         branch_serializer = TripBranchSerializer(branch_data, many=True)
 
-        branch_mapping = {branch['branch_id']: branch['branch_name'] for branch in branch_serializer.data}
-        for detail in tripdetails:
-            detail['branch_name'] = branch_mapping.get(detail['branch_id'], 'Unknown')
 
-        response_data = {
-            'tripbranch': tripdetails,  
-        }
+        response_data = [ 
+            { 
+            'branch_id': branch['branch_id'], 
+            'branch_name': branch['branch_name'] 
+            } 
+            for branch in branch_serializer.data 
+        ]
         return Response(response_data)
+    
 class TripDetailView(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        trip_ticket_id = request.query_params.get('id')  # Use `id` as the query parameter
+        trip_ticket_id = request.query_params.get('trip_ticket_id')  
+        branch_id = request.query_params.get('branch_id') 
         if trip_ticket_id:
             try:
-                # Filter by trip_ticket_id
-                tripdetail_data = TripDetailsModel.objects.using('trips').filter(trip_ticket_id=trip_ticket_id)
+                tripdetail_data = TripDetailsModel.objects.using('trips').filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
                 
-                # If no records found, return a 404
                 if not tripdetail_data.exists():
                     return Response({"error": "Trip ticket not found."}, status=404)
             except ValueError:

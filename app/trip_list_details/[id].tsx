@@ -13,17 +13,18 @@ interface TripDetails {
 
 
 export default function TripListDetails() {
-    const { id } = useLocalSearchParams(); // Access route params
+    const { id, trip_ticket_id } = useLocalSearchParams(); // Access route params
     const [TripDetails, setTripDetails] = useState<TripDetails[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const branch_id = id;
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const response = await api.get('/tripdetails/', {
-                    params: { id }
+                    params: { trip_ticket_id, branch_id }
                 });
                 setTripDetails(response.data.tripdetails);
                 setLoading(false);

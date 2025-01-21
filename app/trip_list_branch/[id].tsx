@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 
 interface TripBranch {
-   branch_id:number;
-   branch_name:string;
+    branch_id: number;
+    branch_name: string;
 }
 
 
@@ -16,15 +16,17 @@ export default function TripBranch() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const router = useRouter();
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const response = await api.get('/tripbranch/', {
                     params: { id }
                 });
-                setTripBranch(response.data.tripbranch);
+                setTripBranch(response.data);
                 setLoading(false);
-                console.log("tite", response.data.tripbranch);
+                console.log("tite", response.data);
             } catch (error) {
                 console.error(error);
                 setLoading(false);
@@ -66,19 +68,30 @@ export default function TripBranch() {
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (
-                    <View style={styles.ticketContainer}>
-                        <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}> Branch ID: {item.branch_id}</Text>
-                        </View>
-                        <View style={styles.ticketBody}>
-                            
-                            <View style={styles.infoSection}>
-                                <Text style={styles.label}>Branch Name</Text>
-                                <Text style={styles.value}>{item.branch_name}</Text>
+                    <TouchableOpacity
+                        onPress={() =>
+                            router.push({
+                                pathname: '/trip_list_details/[id]',
+                                params: {
+                                    id: item.branch_id,
+                                    trip_ticket_id: id,
+                                },
+                            })
+                        }
+                    >
+                        <View style={styles.ticketContainer}>
+                            <View style={styles.ticketHeader}>
+                                <Text style={styles.tripId}> Branch ID: {item.branch_id}</Text>
+                            </View>
+                            <View style={styles.ticketBody}>
+
+                                <View style={styles.infoSection}>
+                                    <Text style={styles.label}>Branch Name</Text>
+                                    <Text style={styles.value}>{item.branch_name}</Text>
+                                </View>
                             </View>
                         </View>
-                      
-                    </View>
+                    </TouchableOpacity>
                 )}
             />
             <View style={styles.paginationButtons}>
