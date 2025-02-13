@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
+import { Link, useRouter, useFocusEffect } from 'expo-router';
 
 interface TripDetails {
     trip_ticket_id: number;
@@ -13,13 +14,19 @@ interface TripDetails {
 
 
 export default function TripListDetails() {
-    const { id, trip_ticket_id } = useLocalSearchParams(); // Access route params
     const [TripDetails, setTripDetails] = useState<TripDetails[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const branch_id = id;
+    const router = useRouter();
+    const params = useLocalSearchParams();
+    const id = Array.isArray(params.id) ? params.id[0] : params.id;
+    const trip_ticket_id = Array.isArray(params.trip_ticket_id) ? params.trip_ticket_id[0] : params.trip_ticket_id;
+
+    // Convert to number if needed
+    const branch_id = id ? parseInt(id as string, 10) : null;
+    const tripId = trip_ticket_id ? parseInt(trip_ticket_id as string, 10) : null;
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -39,7 +46,7 @@ export default function TripListDetails() {
     }, []);
     const filteredTrips = TripDetails.filter((trip) =>
         trip.trip_ticket_id.toString().includes(searchQuery));
-
+    console.log("tritri", trip_ticket_id, branch_id);
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredTrips.slice(indexOfFirstItem, indexOfLastItem);
@@ -67,6 +74,15 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Outslips List</Text>
+            <Button title="Upload Picture" onPress={() =>
+                router.push({
+                    pathname: '/outslip_upload/[id]',
+                    params: {
+                        id: trip_ticket_id,
+                        branch_id: branch_id,
+                    },
+                })
+            } />
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (

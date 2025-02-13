@@ -12,26 +12,29 @@ import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 class LoginView(APIView):
     permission_classes = [AllowAny]
-    
+
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data['user']
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
+        if not serializer.is_valid():
+            print(serializer.errors)  # ✅ This will show the exact problem
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            access_token['username'] = user.username
-            access_token['emp_no'] = user.emp_no
+        user = serializer.validated_data['user']
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
 
-            return Response({
-                'access': str(access_token),
-                'refresh': str(refresh),
-                'user': {
-                    'username': user.username,
-                }
-            }, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        access_token['username'] = user.user_code
+        access_token['user_id'] = user.user_id
+
+        return Response({
+            'access': str(access_token),
+            'refresh': str(refresh),
+            'user': {
+                'username': user.user_code,
+                'user_id': user.user_id,
+            }
+        }, status=status.HTTP_200_OK)
+
     
 class RegisterView(APIView):
     def post(self, request):
@@ -61,30 +64,22 @@ class ProfileView(APIView):
     
 class TripListView(APIView):
     permission_classes = [AllowAny]
-    
+
     def get(self, request):
-        trip_data = TripTicketModel.objects.using('trips').all()
-        tripdriver_data = TripDriverModel.objects.using('trips').all()
-        trip_serializer = TripTicketSerializer(trip_data, many=True)
-        tripdriver_serializer = TripDriverSerializer(tripdriver_data, many=True)
-        
-        triplist = trip_serializer.data
-        
-        tripdriver = tripdriver_serializer.data
-        tripdriver_mapping = {driver['entity_id']: driver['entity_name'] for driver in tripdriver_serializer.data}
+        trips = TripTicketModel.objects.using('default').all()
+        drivers = TripDriverModel.objects.using('default').all()
 
-        triplist = []
+        driver_mapping = {driver.entity_id: driver.entity_name for driver in drivers}
+        
+        trip_serializer = TripTicketSerializer(trips, many=True)
+
         for trip in trip_serializer.data:
-            trip['entity_name'] = tripdriver_mapping.get(trip['entity_id'], '')
-            trip['asst_entity_name'] = tripdriver_mapping.get(trip['asst_entity_id'], '')
-            trip['dispatcher'] = tripdriver_mapping.get(trip['dispatched_by'], '')
-            triplist.append(trip)
+            trip['entity_name'] = driver_mapping.get(trip['entity_id'], '')
+            trip['asst_entity_name'] = driver_mapping.get(trip['asst_entity_id'], '')
+            trip['dispatcher'] = driver_mapping.get(trip['dispatched_by'], '')
 
-        response_data = {
-            'triplist': triplist,
-        }
+        return Response({'triplist': trip_serializer.data})
 
-        return Response(response_data)
 class TripBranchView(APIView):
     permission_classes = [AllowAny]
     
@@ -94,7 +89,7 @@ class TripBranchView(APIView):
             return Response({"error": "ID is required."}, status=400)
         
         try:
-            tripdetail_data = TripDetailsModel.objects.using('trips').filter(trip_ticket_id=trip_ticket_id)
+            tripdetail_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id=trip_ticket_id)
             
             if not tripdetail_data.exists():
                 return Response({"error": "Trip ticket not found."}, status=404)
@@ -104,9 +99,9 @@ class TripBranchView(APIView):
         tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
         tripdetails = tripdetail_serializer.data
 
-        branch_ids = list(set([detail['branch_id'] for detail in tripdetails]))
+        branch_ids = list(set([detail['branch_id'] for detail in tripdetails])) #convert to list and remove duplicates of branch id
 
-        branch_data = TripBranchModel.objects.using('trips').filter(branch_id__in=branch_ids)  
+        branch_data = TripBranchModel.objects.using('default').filter(branch_id__in=branch_ids) # match
         branch_serializer = TripBranchSerializer(branch_data, many=True)
 
 
@@ -127,7 +122,7 @@ class TripDetailView(APIView):
         branch_id = request.query_params.get('branch_id') 
         if trip_ticket_id:
             try:
-                tripdetail_data = TripDetailsModel.objects.using('trips').filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
+                tripdetail_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
                 
                 if not tripdetail_data.exists():
                     return Response({"error": "Trip ticket not found."}, status=404)
@@ -137,6 +132,8 @@ class TripDetailView(APIView):
             return Response({"error": "ID is required."}, status=400)
         
         tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
+        tripdetails = tripdetail_serializer.data
+        branch_ids = list(set([detail['branch_id'] for detail in tripdetails])) 
         
         response_data = {
             'tripdetails': tripdetail_serializer.data,

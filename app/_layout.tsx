@@ -33,6 +33,12 @@ export default function RootLayout() {
           title: 'Trip Branch', // Set the title here
         }}
       />
+      <Stack.Screen
+        name="outslip_upload/[id]"
+        options={{
+          title: 'Outslip Upload', // Set the title here
+        }}
+      />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );

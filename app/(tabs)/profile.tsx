@@ -5,8 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../api';
 interface UserData {
    
-    username: string;
-    emp_no: string;
+    user_name: string;
+    user_id: string;
 }
 export default function Profile() {
     const [userData, setUserData] = useState<UserData | null>(null);   // To hold the user data
@@ -28,7 +28,7 @@ export default function Profile() {
                     },
                 });
                 setUserData(response.data);
-                console.log(response.data);
+                console.log("propro", response.data);
             } catch (error) {
                 console.error('Error fetching user data:', error);
                 Alert.alert('Error', 'Failed to fetch user data');
@@ -51,8 +51,8 @@ export default function Profile() {
             {userData ? (
                 <View style={styles.profileCard}>
                     <Text style={styles.greeting}>User Profile</Text>
-                    <Text style={styles.name}>Username: {userData.username}</Text>
-                    <Text style={styles.empNo}>Employee Number: {userData.emp_no}</Text>
+                    <Text style={styles.name}>Username: {userData.user_name}</Text>
+                    <Text style={styles.empNo}>Employee Number: {userData.user_id}</Text>
                 </View>
             ) : (
                 <Text style={styles.errorText}>No user data available.</Text>

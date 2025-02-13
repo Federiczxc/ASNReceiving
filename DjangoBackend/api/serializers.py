@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.hashers import check_password
+
 from.models import *
 class OCRSerializer(serializers.Serializer):
     image = serializers.ImageField()
@@ -19,11 +21,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
     
 class LoginSerializer(serializers.Serializer):
-    class Meta:
-        model = User
-        fields = ['username', 'password']
         
-    username =  username = serializers.CharField(required=True, max_length=100)
+    username = serializers.CharField(required=True, max_length=100)
     password = serializers.CharField(required=True, write_only=True)
     
     def validate(self, data):
@@ -33,11 +32,12 @@ class LoginSerializer(serializers.Serializer):
         if not username or not password:
             raise serializers.ValidationError("Username and password are required.")
         try:    
-            user = User.objects.get(username=username)
+            user = User.objects.get(user_code=username)
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentiaals.")
-        if not user.check_password(password):
+        if user.password != password:
             raise serializers.ValidationError("Invalid creqedentials.")  # Incorrect password
+        
         data['user'] = user
         return data
 

@@ -43,7 +43,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
 ]
 AUTH_USER_MODEL = "api.User"
-
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'user_id',
+}
 REST_AUTH = {
     'USE_JWT': True,
     'JWT_AUTH_COOKIE': 'djangojwtauth_cookie',
@@ -104,20 +106,20 @@ WSGI_APPLICATION = 'DjangoBackend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
+  # 'default': {
+   #     'ENGINE': 'mssql',
+    #    'NAME': 'asn_receiving',
+     #   'USER': 'sa',
+      #  'PASSWORD':'123',
+       # 'HOST':'localhost',
+    #},
 DATABASES = {
+ 
     'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'asn_receiving',
-        'USER': 'sa',
-        'PASSWORD':'1hris2022',
-        'HOST':'localhost',
-    },
-    'trips': {
         'ENGINE': 'mssql',
         'NAME': 'bootstrap2_ret',
         'USER': 'sa',
-        'PASSWORD':'1hris2022',
+        'PASSWORD':'123',
         'HOST':'localhost',
     }
 }

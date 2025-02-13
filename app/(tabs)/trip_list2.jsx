@@ -78,7 +78,7 @@ export default function TripList2() {
             {user ? (
                 <>
                     <Text style={styles.text}>Welcome, {user.username}!</Text>
-                    <Text style={styles.text}>Employee Number: {user.emp_no}</Text>
+                    <Text style={styles.text}>Employee Number: {user.user_id}</Text>
 
                 </>
             ) : (

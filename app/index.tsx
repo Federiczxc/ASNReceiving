@@ -23,13 +23,14 @@ export default function LoginPage() {
       await AsyncStorage.setItem('refresh_token', refresh);
 
       if (response.data.user) {
-        const { emp_no, username: loggedInUser } = response.data.user;
-        await AsyncStorage.setItem('user_data', JSON.stringify({ emp_no, username: loggedInUser }));
+        const { user_id, username: loggedInUser } = response.data.user;
+        console.log("betlog", response.data);
+        await AsyncStorage.setItem('user_data', JSON.stringify({ user_id, username: loggedInUser }));
       } else {
         console.error("User data not found in the response.");
       }
       console.log("rerere", response.data);
-      router.push('/trip_list2');
+      router.push('/profile');
     }
     catch (error) {
       console.error(error);

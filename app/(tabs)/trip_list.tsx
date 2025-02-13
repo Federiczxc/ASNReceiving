@@ -25,7 +25,6 @@ export default function TripList() {
                 const response = await api.get('/triplist/');
                 setTripData(response.data.triplist);
                 setLoading(false);
-                console.log(response.data.triplist);
             } catch (error) {
                 console.error(error);
                 setLoading(false);
