@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet, FlatList, ActivityIndicator,
 import axios from 'axios';
 import api from '../../api';
 import { useRouter } from 'expo-router';
+import { format } from 'date-fns';
 interface Trip {
     trip_ticket_id: number;
     plate_no: string;
@@ -10,6 +11,7 @@ interface Trip {
     entity_name: string;
     asst_entity_name: string;
     dispatcher: string;
+    trip_ticket_date: Date;
 }
 
 export default function TripList() {
@@ -89,7 +91,9 @@ export default function TripList() {
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id}</Text>
+                                <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
+                                <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy hh:mm a')}</Text>
+
                             </View>
                             <View style={styles.ticketBody}>
                                 <View style={styles.infoSection}>

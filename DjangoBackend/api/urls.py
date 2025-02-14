@@ -8,4 +8,5 @@ urlpatterns = [
     path('triplist/', TripListView.as_view(), name='triplist'),
     path('tripdetails/', TripDetailView.as_view(), name='tripdetails'),
     path('tripbranch/', TripBranchView.as_view(), name='tripbranch'),
-]
+    path('outslipview/', OutslipDetailView.as_view(), name='outslipview'),
+]   

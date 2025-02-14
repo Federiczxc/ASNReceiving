@@ -54,6 +54,7 @@ class TripDriverModel(models.Model):
 class TripDetailsModel(models.Model):
     trip_ticket_id = models.BigIntegerField(primary_key=True)
     branch_id = models.BigIntegerField()
+    trip_ticket_detail_id = models.BigIntegerField()
     full_address = models.TextField()
     trans_name = models.CharField(max_length=255)
     remarks = models.TextField()

@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 
 interface TripDetails {
     trip_ticket_id: number;
+    trip_ticket_detail_id: number;
     trans_name: string;
     remarks: string;
     branch_charges: number;
     document_amount: number;
 }
 
+interface BranchDetails {
+    branch_id: number;
+    branch_name: string;
+}
 
 export default function TripListDetails() {
     const [TripDetails, setTripDetails] = useState<TripDetails[]>([]);
+    const [BranchDetails, setBranchDetails] = useState<BranchDetails | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
@@ -34,8 +40,9 @@ export default function TripListDetails() {
                     params: { trip_ticket_id, branch_id }
                 });
                 setTripDetails(response.data.tripdetails);
+                console.log(response.data.tripdetails);
+                setBranchDetails(response.data.branches[0]);
                 setLoading(false);
-                console.log("tite", response.data.tripdetails);
             } catch (error) {
                 console.error(error);
                 setLoading(false);
@@ -73,7 +80,7 @@ export default function TripListDetails() {
     }
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Outslips List</Text>
+            <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
             <Button title="Upload Picture" onPress={() =>
                 router.push({
                     pathname: '/outslip_upload/[id]',
@@ -86,24 +93,35 @@ export default function TripListDetails() {
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (
-                    <View style={styles.ticketContainer}>
-                        <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}>{item.trans_name}</Text>
-                        </View>
-                        <View style={styles.ticketBody}>
-                            <View style={styles.infoSection}>
-                                <Text style={styles.label}>Branch Charges:</Text>
-                                <Text style={styles.value}>{item.branch_charges}</Text>
+                    <TouchableOpacity
+                        onPress={() =>
+                            router.push({
+                                pathname: '/outslip_upload/[id]',
+                                params: {
+                                    id: item.trip_ticket_detail_id,
+                                },
+                            })
+                        }
+                    >
+                        <View style={styles.ticketContainer}>
+                            <View style={styles.ticketHeader}>
+                                <Text style={styles.tripId}>{item.trans_name} #{item.trip_ticket_detail_id}</Text>
                             </View>
-                            <View style={styles.infoSection}>
-                                <Text style={styles.label}>Document Amount:</Text>
-                                <Text style={styles.value}>{item.document_amount}</Text>
+                            <View style={styles.ticketBody}>
+                                <View style={styles.infoSection}>
+                                    <Text style={styles.label}>Branch Charges:</Text>
+                                    <Text style={styles.value}>{item.branch_charges}</Text>
+                                </View>
+                                <View style={styles.infoSection}>
+                                    <Text style={styles.label}>Document Amount:</Text>
+                                    <Text style={styles.value}>{item.document_amount}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.ticketFooter}>
+                                <Text style={styles.footerText} >Remarks: {item.remarks}</Text>
                             </View>
                         </View>
-                        <View style={styles.ticketFooter}>
-                            <Text style={styles.footerText} >Remarks: {item.remarks}</Text>
-                        </View>
-                    </View>
+                    </TouchableOpacity>
                 )}
             />
             <View style={styles.paginationButtons}>
