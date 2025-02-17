@@ -1,9 +1,13 @@
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import Carousel from 'react-native-reanimated-carousel';
+import { LogBox } from 'react-native';
+import { Notifier, Easing } from 'react-native-notifier';
+
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
         branch_name: ''
@@ -15,7 +19,9 @@ export default function OutslipUpload() {
         remarks: null,
         branch_charges: null,
         document_amount: null
-    })
+    });
+    LogBox.ignoreLogs(['findDOMNode is deprecated']);
+
     const [selectedImage, setSelectedImage] = useState(null);
     const [ocrText, setOcrText] = useState('');
     const { id } = useLocalSearchParams();
@@ -23,6 +29,8 @@ export default function OutslipUpload() {
     const trip_ticket_detail_id = id;
     const [images, setImages] = useState([null]);
     const [ocrResults, setOcrResults] = useState([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [editableOcrText, setEditableOcrText] = useState(ocrText);
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -36,68 +44,66 @@ export default function OutslipUpload() {
                 console.error(error);
             }
         };
-
         fetchData();
     }, []);
     console.log("brara", tripBranch);
-    const pickImage = async () => {
+    const pickImage = async (index) => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             quality: 1,
         });
-
         if (!result.canceled) {
-            setSelectedImage(result.assets[0].uri);
+            let newImages = [...images];
+            newImages[index] = result.assets[0].uri;
+            setImages(newImages);
         }
     };
     const addNewSlide = () => {
         setImages([...images, null]); // Add a new empty slide
         setOcrResults([...ocrResults, '']);
+        console.log("imaima", images)
+        Notifier.showNotification({
+            title: 'Success',
+            description: 'Hello! Can you help me with notifications?',
+            duration: 200,
+            showAnimationDuration: 800,
+        });
     };
-
-    const handleOCR = async () => {
-        if (!selectedImage) {
+    const handleOCR = async (index) => {
+        if (!images[index]) {
             Alert.alert('No image selected', 'Please select an image first.');
             return;
         }
-
         try {
             const formData = new FormData();
             formData.append('image', {
-                uri: selectedImage,
+                uri: images[index],
                 type: 'image/jpeg',
                 name: 'photo.jpg',
             });
-
             const response = await api.post('/ocr/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
             let newOcrResults = [...ocrResults];
             newOcrResults[index] = response.data.text || 'No text detected';
             setOcrResults(newOcrResults);
+            setEditableOcrText(newOcrResults[index]);
 
+            console.log("ocrreuslts", newOcrResults);
         } catch (error) {
             console.error('Error during OCR processing:', error);
             Alert.alert('Error', 'Failed to process the image. Please try again.');
         }
     };
-
     return (
-
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-
+        <View style={styles.container} >
             <View style={styles.container1}>
-
-
                 <View style={styles.ticketContainer}>
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                         <View style={styles.ticketHeader}>
                             <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.trip_ticket_detail_id}</Text>
                             <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
-
                         </View>
                         {isExpanded && (
                             <>
@@ -117,79 +123,75 @@ export default function OutslipUpload() {
                             </>
                         )}
                     </TouchableOpacity>
-
                 </View>
             </View>
             <View style={styles.container2}>
                 <Carousel
                     loop={false}
                     width={Dimensions.get('window').width * 1}
-                    height={Dimensions.get('window').height * 1}
+                    height={500}
                     data={images}
-                    scrollAnimationDuration={500}
+                    scrollAnimationDuration={200}
+                    onProgressChange={(_, absoluteProgress) => {
+                        const newIndex = Math.round(absoluteProgress);
+                        setCurrentIndex(newIndex);
+                        setEditableOcrText(ocrResults[newIndex] || '');
+                    }}
                     renderItem={({ index }) => (
                         <>
-
-                            {/* Image Preview & OCR Result Card */}
-                            <View style={styles.imageCard}>
-                                <View style={styles.imageContainer}>
-
-                                    <TouchableOpacity onPress={() => pickImage(index)} activeOpacity={0.0} style={styles.imageCard}>
-                                        <Text style={styles.ocrTitle}>Picture:</Text>
-
-                                        {images[index] ? (
-                                            <>
-                                                <Image source={{ uri: images[index] }} style={styles.image} />
-                                            </>
-
-                                        ) : (
-                                            <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
-                                        )}
-                                    </TouchableOpacity>
-
-                                </View>
-
+                            <View style={styles.paginationContainer}>
+                                {images.map((_, i) => (
+                                    <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
+                                ))}
                             </View>
-                            <View style={styles.card}>
+                            {/* Image Preview & OCR Result Card */}
+                            <View style={styles.ocrCard}>
                                 <Text style={styles.ocrTitle}>OCR Result:</Text>
                                 <TextInput
                                     style={styles.textOutput}
-                                    value={ocrText || ''}
-                                    onChangeText={(text) => setOcrText(text)}
+                                    value={editableOcrText || ''}  // Use editable state
+                                    onChangeText={(text) => {
+                                        const newOcrResults = [...ocrResults];
+                                        newOcrResults[index] = text;  // Update OCR text for the current image
+                                        setOcrResults(newOcrResults);
+                                        setEditableOcrText(text);  // Keep the editable text updated
+                                    }}
                                     multiline
                                 />
-
                             </View>
+                            <View style={styles.imageCard}>
+                                <TouchableOpacity onPress={() => pickImage(index)} activeOpacity={0.7} style={styles.imageCard}>
+                                    {images[index] ? (
+                                        <>
+                                            <Image source={{ uri: images[index] }} style={styles.image} />
+                                        </>
+                                    ) : (
+                                        <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+
+
                             {/* Buttons Section */}
-                            <View style={styles.buttonContainer}>
-                                <Button title="Extract Text" onPress={() => handleOCR(index)} />
-                                <Button title="Submit" onPress={handleOCR} />
-                            </View>
-
                         </>
                     )} />
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Extract Text" onPress={() => handleOCR(currentIndex)} />
+                <Button title="Submit" onPress={handleOCR} />
                 <Button title="Add Picture" onPress={addNewSlide} />
             </View>
-        </ScrollView >
-
+        </View>
     );
 }
-
-
 const styles = StyleSheet.create({
-    scrollContainer: {
-        flexGrow: 1,
-        alignItems: 'center',
-        paddingBottom: 20,
-    },
     container1: {
-        width: Dimensions.get('window').width * 1,
+        width: '100%',
         alignItems: 'center',
         backgroundColor: 'transparent',
-        padding: 16,
     },
     container2: {
-        width: Dimensions.get('window').width * 1,
+        width: '100%',
         alignItems: 'center',
         backgroundColor: 'transparent',
         /*    borderWidth: 1,
@@ -201,11 +203,10 @@ const styles = StyleSheet.create({
         width: '100%',
         borderWidth: 1,
         borderColor: '#333',
-        borderRadius: 15,
+        borderRadius: 10,
         marginVertical: 20,
         overflow: 'hidden',
         backgroundColor: '#fff',
-        elevation: 3,
     },
     ticketHeader: {
         backgroundColor: '#4caf50',
@@ -243,34 +244,26 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
     },
-    imageContainer: {
-        width: '100%',
-        height: 200,
-        backgroundColor: '#ddd',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 10,
-    },
     imageCard: {
         width: '100%',
-        height: 200,
+        height: 300,
         backgroundColor: '#ddd',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 10,
-        marginBottom: 20,
+        padding: 5
     },
     image: {
         width: '100%',
         height: '100%',
-        borderRadius: 10,
+        borderRadius: 20,
         resizeMode: 'contain',
     },
     placeholder: {
         fontSize: 14,
         color: '#666',
     },
-    card: {
+    ocrCard: {
         backgroundColor: '#fff',
         padding: 16,
         borderRadius: 10,
@@ -281,7 +274,7 @@ const styles = StyleSheet.create({
         elevation: 3,
         width: '100%',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 30,
     },
     ocrTitle: {
         fontSize: 16,
@@ -303,5 +296,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
+        paddingHorizontal: 10,
+    },
+    paginationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10
+    },
+    dot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#ccc',
+        marginHorizontal: 5,
+    },
+    activeDot: {
+        backgroundColor: '#4caf50',  // Active dot color
+        width: 12,
+        height: 12,
     },
 });
