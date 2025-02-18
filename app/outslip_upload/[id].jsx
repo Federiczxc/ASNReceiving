@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
@@ -31,6 +31,8 @@ export default function OutslipUpload() {
     const [ocrResults, setOcrResults] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [editableOcrText, setEditableOcrText] = useState(ocrText);
+    const [opened, setOpened] = useState(false);
+    const [remarks, setRemarks] = useState([]);
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -62,12 +64,55 @@ export default function OutslipUpload() {
     const addNewSlide = () => {
         setImages([...images, null]); // Add a new empty slide
         setOcrResults([...ocrResults, '']);
+        setRemarks([...remarks, '']);
         console.log("imaima", images)
-        Notifier.showNotification({
-            title: 'Success',
-            description: 'Hello! Can you help me with notifications?',
-            duration: 200,
-            showAnimationDuration: 800,
+
+        requestAnimationFrame(() => {
+            Notifier.showNotification({
+                title: 'Success',
+                description: 'Added new picture!',
+                duration: 3000,
+            });
+        });
+    };
+
+    const removeSlide = (index) => {
+        if (images.length === 1) {
+            Alert.alert("Cannot remove the last slide.");
+            return;
+        }
+
+        let updatedImages = [...images];
+        updatedImages.splice(index, 1);
+
+        let updatedOcrResults = [...ocrResults];
+        updatedOcrResults.splice(index, 1);
+
+        let updatedRemarks = [...remarks];
+        updatedRemarks.splice(index, 1);
+
+        setImages(updatedImages);
+        setOcrResults(updatedOcrResults);
+        setRemarks(updatedRemarks);
+
+        // Adjust the currentIndex to point to a valid slide
+        let newIndex = currentIndex;
+        if (currentIndex === index) {
+            // If the removed slide was the current one, move to the previous slide
+            newIndex = Math.max(0, index - 1);
+        } else if (currentIndex > index) {
+            // If the removed slide was before the current one, adjust the currentIndex
+            newIndex = currentIndex - 1;
+        }
+
+        setCurrentIndex(newIndex);
+
+        requestAnimationFrame(() => {
+            Notifier.showNotification({
+                title: 'Success',
+                description: 'Slide removed!',
+                duration: 3000,
+            });
         });
     };
     const handleOCR = async (index) => {
@@ -85,6 +130,7 @@ export default function OutslipUpload() {
             const response = await api.post('/ocr/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
+            <ActivityIndicator size="large" />
             let newOcrResults = [...ocrResults];
             newOcrResults[index] = response.data.text || 'No text detected';
             setOcrResults(newOcrResults);
@@ -97,7 +143,9 @@ export default function OutslipUpload() {
         }
     };
     return (
-        <View style={styles.container} >
+
+        <ScrollView style={styles.container} >
+
             <View style={styles.container1}>
                 <View style={styles.ticketContainer}>
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
@@ -125,8 +173,11 @@ export default function OutslipUpload() {
                     </TouchableOpacity>
                 </View>
             </View>
+
+
             <View style={styles.container2}>
                 <Carousel
+                    key={images.length}
                     loop={false}
                     width={Dimensions.get('window').width * 1}
                     height={500}
@@ -139,11 +190,7 @@ export default function OutslipUpload() {
                     }}
                     renderItem={({ index }) => (
                         <>
-                            <View style={styles.paginationContainer}>
-                                {images.map((_, i) => (
-                                    <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
-                                ))}
-                            </View>
+
                             {/* Image Preview & OCR Result Card */}
                             <View style={styles.ocrCard}>
                                 <Text style={styles.ocrTitle}>OCR Result:</Text>
@@ -155,6 +202,17 @@ export default function OutslipUpload() {
                                         newOcrResults[index] = text;  // Update OCR text for the current image
                                         setOcrResults(newOcrResults);
                                         setEditableOcrText(text);  // Keep the editable text updated
+                                    }}
+                                    multiline
+                                />
+                                <Text style={styles.ocrTitle}>Remarks:</Text>
+                                <TextInput
+                                    style={styles.textOutput}
+                                    value={remarks[currentIndex] || ''}
+                                    onChangeText={(text) => {
+                                        let newRemarks = [...remarks];
+                                        newRemarks[currentIndex] = text;
+                                        setRemarks(newRemarks)
                                     }}
                                     multiline
                                 />
@@ -170,21 +228,76 @@ export default function OutslipUpload() {
                                     )}
                                 </TouchableOpacity>
                             </View>
-
+                            <View style={styles.paginationContainer}>
+                                {images.map((_, i) => (
+                                    <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
+                                ))}
+                            </View>
 
                             {/* Buttons Section */}
                         </>
                     )} />
             </View>
+
             <View style={styles.buttonContainer}>
-                <Button title="Extract Text" onPress={() => handleOCR(currentIndex)} />
-                <Button title="Submit" onPress={handleOCR} />
-                <Button title="Add Picture" onPress={addNewSlide} />
+                <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
+                    <Text style={styles.buttonText}>Extract Text</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.button} onPress={() => setOpened(true)}>
+                    <Text style={styles.buttonText}>Submit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.button} onPress={addNewSlide}>
+                    <Text style={styles.buttonText}>Add Picture</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
+                    <Text style={styles.buttonText}>Remove Slide</Text>
+                </TouchableOpacity>
             </View>
-        </View>
+
+
+        </ScrollView>
     );
 }
 const styles = StyleSheet.create({
+
+    activeDot: {
+        backgroundColor: '#4caf50',  // Active dot color
+        width: 12,
+        height: 12,
+    },
+
+    button: {
+        width: '48%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 10,
+        marginVertical: 5,
+        height: '45%',
+        backgroundColor: '#2986cc',  // Active dot color
+
+
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        height: '100%',
+        flexWrap: 'wrap',
+        flex: 1,
+        paddingHorizontal: 10,
+    },
+    buttonText: {
+        color: '#fff',
+
+    },
+    container: {
+        flex: 1,
+    },
     container1: {
         width: '100%',
         alignItems: 'center',
@@ -197,29 +310,13 @@ const styles = StyleSheet.create({
         /*    borderWidth: 1,
            borderColor: '#333',
            borderRadius: 15, */
-        padding: 16,
     },
-    ticketContainer: {
-        width: '100%',
-        borderWidth: 1,
-        borderColor: '#333',
-        borderRadius: 10,
-        marginVertical: 20,
-        overflow: 'hidden',
-        backgroundColor: '#fff',
-    },
-    ticketHeader: {
-        backgroundColor: '#4caf50',
-        padding: 10,
-    },
-    tripId: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-    },
-    ticketBody: {
-        padding: 10,
+    dot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#ccc',
+        marginHorizontal: 5,
     },
     infoSection: {
         flexDirection: 'row',
@@ -231,14 +328,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#555',
     },
-    value: {
-        fontSize: 16,
-        color: '#000',
-    },
-    ticketFooter: {
-        backgroundColor: '#4caf50',
-        padding: 10,
-    },
     footerText: {
         fontSize: 14,
         color: '#fff',
@@ -246,12 +335,12 @@ const styles = StyleSheet.create({
     },
     imageCard: {
         width: '100%',
-        height: 300,
+        height: 250,
         backgroundColor: '#ddd',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 10,
-        padding: 5
+        padding: 5,
     },
     image: {
         width: '100%',
@@ -259,10 +348,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         resizeMode: 'contain',
     },
-    placeholder: {
-        fontSize: 14,
-        color: '#666',
-    },
+
     ocrCard: {
         backgroundColor: '#fff',
         padding: 16,
@@ -274,13 +360,24 @@ const styles = StyleSheet.create({
         elevation: 3,
         width: '100%',
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 20,
     },
     ocrTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#333',
+/*         marginBottom: 10,
+ */        color: '#333',
+    },
+
+    paginationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 10
+    },
+    placeholder: {
+        fontSize: 14,
+        color: '#666',
     },
     textOutput: {
         fontSize: 14,
@@ -292,28 +389,35 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         minHeight: 60,
     },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    ticketContainer: {
         width: '100%',
-        paddingHorizontal: 10,
+        borderWidth: 1,
+        borderColor: '#333',
+        borderRadius: 10,
+        marginVertical: 20,
+        overflow: 'hidden',
+        backgroundColor: '#fff',
     },
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 10
+    ticketFooter: {
+        backgroundColor: '#4caf50',
+        padding: 10,
     },
-    dot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#ccc',
-        marginHorizontal: 5,
+    ticketHeader: {
+        backgroundColor: '#4caf50',
+        padding: 10,
     },
-    activeDot: {
-        backgroundColor: '#4caf50',  // Active dot color
-        width: 12,
-        height: 12,
+
+    ticketBody: {
+        padding: 10,
+    },
+    tripId: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+    },
+    value: {
+        fontSize: 16,
+        color: '#000',
     },
 });

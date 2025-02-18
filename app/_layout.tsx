@@ -4,48 +4,51 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 export default function RootLayout() {
   return (
 
+    <GestureHandlerRootView>
+<NotifierWrapper>
+      <Stack screenOptions={{
+        headerStyle: {
+          backgroundColor: '#25292e',
+        },
+        headerShadowVisible: false,
+        headerTintColor: '#fff',
+      }}>
 
-        <Stack screenOptions={{
-          headerStyle: {
-            backgroundColor: '#25292e',
-          },
-          headerShadowVisible: false,
-          headerTintColor: '#fff',
-        }}>
+        <Stack.Screen
+          name="register"
+          options={{
+            title: '', // Set the title here
+          }}
+        />
+        <Stack.Screen
+          name="index"
+          options={{
+            title: '', // Set the title here
+          }}
+        />
+        <Stack.Screen
+          name="trip_list_details/[id]"
+          options={{
+            title: 'Trip Details', // Set the title here
+          }}
+        />
+        <Stack.Screen
+          name="trip_list_branch/[id]"
+          options={{
+            title: 'Trip Branch', // Set the title here
+          }}
+        />
+        <Stack.Screen
+          name="outslip_upload/[id]"
+          options={{
+            title: 'Outslip Upload', // Set the title here
+          }}
+        />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          <Stack.Screen
-            name="register"
-            options={{
-              title: '', // Set the title here
-            }}
-          />
-          <Stack.Screen
-            name="index"
-            options={{
-              title: '', // Set the title here
-            }}
-          />
-          <Stack.Screen
-            name="trip_list_details/[id]"
-            options={{
-              title: 'Trip Details', // Set the title here
-            }}
-          />
-          <Stack.Screen
-            name="trip_list_branch/[id]"
-            options={{
-              title: 'Trip Branch', // Set the title here
-            }}
-          />
-          <Stack.Screen
-            name="outslip_upload/[id]"
-            options={{
-              title: 'Outslip Upload', // Set the title here
-            }}
-          />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-        </Stack>
+      </Stack>
+      </NotifierWrapper>
+    </GestureHandlerRootView>
 
   );
 }

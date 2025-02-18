@@ -35,9 +35,8 @@ class LoginSerializer(serializers.Serializer):
             user = User.objects.get(user_code=username)
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentiaals.")
-        if user.password != password:
+        if not check_password(password, user.password):
             raise serializers.ValidationError("Invalid creqedentials.")  # Incorrect password
-        
         data['user'] = user
         return data
 

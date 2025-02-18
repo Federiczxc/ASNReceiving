@@ -81,15 +81,6 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
-            <Button title="Upload Picture" onPress={() =>
-                router.push({
-                    pathname: '/outslip_upload/[id]',
-                    params: {
-                        id: trip_ticket_id,
-                        branch_id: branch_id,
-                    },
-                })
-            } />
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (
