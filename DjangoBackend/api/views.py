@@ -6,6 +6,8 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .serializers import *
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 from PIL import Image
 import pytesseract
@@ -37,7 +39,7 @@ class LoginView(APIView):
 
     
 class RegisterView(APIView):
-    def post(self, request):
+     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         
         if serializer.is_valid():
@@ -216,3 +218,52 @@ class OCRView(APIView):
         except Exception as e:
 
             return Response({'error':str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+class UploadOutslipView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        upload_images = request.FILES.getlist('upload_images')    #should be same name from frointend
+        upload_remarks = request.data.getlist('upload_remarks', '')
+        
+        if not upload_images:
+            return Response({'error': 'Image is required'}, status=status.HTTP_400_BAD_REQUEST)
+        uploaded_files = []
+        errors = []
+        
+        for i, upload_image in enumerate(upload_images):
+        
+            remark = upload_remarks[i] if i < len(upload_remarks) else None
+            
+            data = request.data.copy()
+            data['upload_remarks'] = remark
+            serializer = OutslipImagesSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                try:
+                    file_path = f'outslips/{upload_image.name}'
+                    saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
+                    file_url = default_storage.url(saved_path)
+
+                    outslip_image = serializer.save(
+                        upload_files=file_url,
+                        upload_remarks = remark,
+                        created_date=now(),
+                        updated_date=now()
+                    )
+                    uploaded_files.append(OutslipImagesSerializer(outslip_image).data)
+                    
+                except Exception as e:
+                    errors.append({'upload_image': upload_image.name, 'error':str(e)})
+            else:
+                errors.append({'upload_image': upload_image.name, 'errors': serializer.errors})
+        
+        if uploaded_files:
+            return Response({
+                'message': 'Upload success',
+                'uploaded_files': uploaded_files,
+                'errors': errors if errors else None
+            }, status=status.HTTP_201_CREATED)
+
+        return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
