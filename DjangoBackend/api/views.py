@@ -8,10 +8,13 @@ from django.contrib.auth import authenticate
 from .serializers import *
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-
+from django.utils.timezone import now
 from PIL import Image
+import logging
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+logger = logging.getLogger(__name__)
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -57,20 +60,19 @@ class RegisterView(APIView):
     
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
-    
     def get(self, request):
         user = request.user
+        
         serializer = UserSerializer(user)
-
         return Response(serializer.data)
     
 class TripListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+                
         trips = TripTicketModel.objects.using('default').all()
         drivers = TripDriverModel.objects.using('default').all()
-
         driver_mapping = {driver.entity_id: driver.entity_name for driver in drivers}
         
         trip_serializer = TripTicketSerializer(trips, many=True)
@@ -209,6 +211,7 @@ class OCRView(APIView):
     
     def post(self, request):
         file = request.FILES.get('image')
+        logger.warning(file)
         if not file:
             return Response ({'error': 'No image uploaded'}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -220,37 +223,54 @@ class OCRView(APIView):
             return Response({'error':str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
+
 class UploadOutslipView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
-        upload_images = request.FILES.getlist('upload_images')    #should be same name from frointend
+        upload_images = request.FILES.getlist('image',)    #should be same name from frointend
         upload_remarks = request.data.getlist('upload_remarks', '')
-        
+        upload_text = request.data.getlist('upload_text', '')
+        trip_ticket_id = request.data.get('trip_ticket_id')
+        trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
+        user_id = request.data.get('created_by')
+        date_now = request.data.get('created_date')
+        logger.warning(f"Upload Images: {upload_images}")
+        logger.warning(f"Upload Remarks: {upload_remarks}")
+        logger.warning(f"Trip Ticket ID: {trip_ticket_id}")
+        logger.warning(f"Trip Ticket Detail ID: {trip_ticket_detail_id}")
         if not upload_images:
-            return Response({'error': 'Image is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Image is required'}, status=status.HTTP_402_BAD_REQUEST)
         uploaded_files = []
         errors = []
-        
-        for i, upload_image in enumerate(upload_images):
+        for i, upload_image in enumerate(upload_images): #pambukod if wala, magiging json yung data sa db
         
             remark = upload_remarks[i] if i < len(upload_remarks) else None
-            
+            upload_txt = upload_text[i] if i < len(upload_text) else None
             data = request.data.copy()
             data['upload_remarks'] = remark
-            serializer = OutslipImagesSerializer(data=request.data)
+            data['upload_text'] = upload_txt
+            serializer = OutslipImagesSerializer(data=data)
             
             if serializer.is_valid():
                 try:
                     file_path = f'outslips/{upload_image.name}'
                     saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
                     file_url = default_storage.url(saved_path)
-
                     outslip_image = serializer.save(
+                        server_id = 1,
                         upload_files=file_url,
+                        trip_ticket_id = trip_ticket_id,
+                        trip_ticket_detail_id = trip_ticket_detail_id,
                         upload_remarks = remark,
-                        created_date=now(),
-                        updated_date=now()
+                        upload_text = upload_txt,  
+                        created_by=user_id,
+                        created_date=date_now,
+                        updated_by=user_id,
+                        updated_date=date_now,
+                        is_fap = 0,
+                        is_candis = 0,
+                        is_posted = 0,
                     )
                     uploaded_files.append(OutslipImagesSerializer(outslip_image).data)
                     
@@ -265,5 +285,4 @@ class UploadOutslipView(APIView):
                 'uploaded_files': uploaded_files,
                 'errors': errors if errors else None
             }, status=status.HTTP_201_CREATED)
-
         return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)

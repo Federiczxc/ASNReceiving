@@ -65,3 +65,8 @@ class TripBranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripBranchModel
         fields = '__all__'
+        
+class OutslipImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OutslipImagesModel
+        fields = '__all__'

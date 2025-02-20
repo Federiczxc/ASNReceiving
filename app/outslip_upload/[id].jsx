@@ -7,7 +7,7 @@ import api from '../../api';
 import Carousel from 'react-native-reanimated-carousel';
 import { LogBox } from 'react-native';
 import { Notifier, Easing } from 'react-native-notifier';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
         branch_name: ''
@@ -48,7 +48,7 @@ export default function OutslipUpload() {
         };
         fetchData();
     }, []);
-    console.log("brara", tripBranch);
+    /* console.log("brara", tripBranch); */
     const pickImage = async (index) => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -135,13 +135,105 @@ export default function OutslipUpload() {
             newOcrResults[index] = response.data.text || 'No text detected';
             setOcrResults(newOcrResults);
             setEditableOcrText(newOcrResults[index]);
-
+            console.log("formdaa", formData);
             console.log("ocrreuslts", newOcrResults);
         } catch (error) {
             console.error('Error during OCR processing:', error);
             Alert.alert('Error', 'Failed to process the image. Please try again.');
         }
     };
+
+    const handleSubmit = async () => {
+        const accessToken = await AsyncStorage.getItem('access_token');
+        const userData = await AsyncStorage.getItem('user_data');
+        const userId = userData ? JSON.parse(userData).user_id : null;
+
+        console.log('acotot', userId);
+        try {
+            const formData = new FormData();
+            /*  images.forEach((imageUri, index) => {
+                 if (imageUri) {
+                     formData.append('image', {
+                         uri: imageUri,
+                         type: 'image/jpeg',
+                         name: `photo_${index}.jpg`,
+                     });
+                 }
+             }); */
+            images.forEach((imageUri, index) => {
+                if (imageUri) {
+                    const imageType = imageUri.split('.').pop();  // Get the file extension
+                    const mimeType = `image/${imageType}`;  // Create the MIME type
+
+                    formData.append('image', {
+                        uri: imageUri,
+                        type: mimeType,  // Use the dynamic MIME type
+                        name: `photo_${index}.${imageType}`,  // Use the correct file extension
+                    });
+                }
+            });
+
+            formData.append('trip_ticket_detail_id', trip_ticket_detail_id.toString());
+            formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
+            formData.append('server_id', '1');
+            const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            formData.append('created_date', createdDate);
+            formData.append('created_by', userId);
+            formData.append('server_id', '1');
+            if (Array.isArray(ocrResults)) {
+                ocrResults.forEach((ocrResult) => {
+                    formData.append('upload_text', ocrResult);
+                });
+            } else {
+                formData.append('upload_remarks', '');
+            }
+            console
+            if (Array.isArray(remarks)) {
+                remarks.forEach((remark) => {
+                    formData.append('upload_remarks', remark);
+                });
+            } else {
+                formData.append('upload_remarks', '');
+            }
+            console.log("paso", formData);
+            const response = await api.post('/outslipupload/', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    /* 'Authorization': `Bearer ${accessToken}`, */
+                },
+            });
+            Notifier.showNotification({
+                title: 'Success',
+                description: 'Outslip uploaded successfully',
+                duration: 3000,
+            });
+
+            console.log('succ', response.data);
+        }
+        catch (error) {
+            console.error('Error:', error);
+
+            if (error.response) {
+                console.log('Response Data:', error.response.data);
+                console.log('Response Status:', error.response.status);
+                console.log('Response Headers:', error.response.headers);
+
+                const details = error.response.data.details || [];
+                let errorMessage = 'Upload failed:\n';
+
+                details.forEach(detail => {
+                    const errors = detail.errors || {};
+                    errorMessage += `${detail.upload_image}: ${JSON.stringify(errors)}\n`;
+                });
+
+                Alert.alert('Upload Failed', errorMessage);
+            } else {
+                Alert.alert('Upload Failed', 'An unexpected error occurred.');
+            }
+        }
+    };
+
+
     return (
 
         <ScrollView style={styles.container} >
@@ -244,8 +336,8 @@ export default function OutslipUpload() {
                     <Text style={styles.buttonText}>Extract Text</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.button} onPress={() => setOpened(true)}>
-                    <Text style={styles.buttonText}>Submit</Text>
+                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                    <Text style={styles.buttonText} >Submit</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.button} onPress={addNewSlide}>

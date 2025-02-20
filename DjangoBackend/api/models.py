@@ -79,6 +79,7 @@ class OutslipImagesModel(models.Model):
     trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
     upload_id = models.BigAutoField(primary_key=True) #identity
     trip_ticket_detail_id = models.BigIntegerField()
+    upload_text = models.CharField(max_length=4000, null=True, blank=True)
     upload_remarks = models.CharField(max_length=4000, null=True, blank=True)
     upload_files = models.CharField(max_length=4000, null=True, blank=True)
     created_by = models.BigIntegerField() #sys_user
@@ -93,9 +94,9 @@ class OutslipImagesModel(models.Model):
     class Meta:
         db_table = 'scm_tr_outslip_to_images'
         managed = True
-        constraints = [
+    """     constraints = [
                 models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='outslip_images_composite_pk') #not working so manual it sa mssql
-            ]
+            ] """
     
     
     class TripTicketBranchLogsModel(models.Model):
@@ -118,8 +119,8 @@ class OutslipImagesModel(models.Model):
         class Meta:
             db_table = 'scm_tr_trip_ticket_branch_logs'
             managed = True
-            constraints = [
+        """     constraints = [
                 models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='branch_logs_composite_pk') #not working so manual it sa mssql
             ]
-
+ """
     
