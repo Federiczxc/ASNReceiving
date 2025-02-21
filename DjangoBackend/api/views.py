@@ -10,6 +10,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.utils.timezone import now
 from PIL import Image
+from datetime import datetime
+
 import logging
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
@@ -258,7 +260,6 @@ class UploadOutslipView(APIView):
                     saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
                     file_url = default_storage.url(saved_path)
                     outslip_image = serializer.save(
-                        server_id = 1,
                         upload_files=file_url,
                         trip_ticket_id = trip_ticket_id,
                         trip_ticket_detail_id = trip_ticket_detail_id,
@@ -268,9 +269,6 @@ class UploadOutslipView(APIView):
                         created_date=date_now,
                         updated_by=user_id,
                         updated_date=date_now,
-                        is_fap = 0,
-                        is_candis = 0,
-                        is_posted = 0,
                     )
                     uploaded_files.append(OutslipImagesSerializer(outslip_image).data)
                     

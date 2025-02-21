@@ -4,18 +4,15 @@ import axios from 'axios';
 import api from '../../api';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
-interface Trip {
+interface TripUploads {
     trip_ticket_id: number;
-    plate_no: string;
-    remarks: string;
-    entity_name: string;
-    asst_entity_name: string;
-    dispatcher: string;
-    trip_ticket_date: Date;
+    branch_name: string;
+    trip_ticket_detail_id: number;
+    trans_name: string;
 }
 
 export default function TripList() {
-    const [tripData, setTripData] = useState<Trip[]>([]);
+    const [tripData, setTripData] = useState<TripUploads[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
@@ -94,29 +91,29 @@ export default function TripList() {
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
                                 <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
-                                <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy hh:mm a')}</Text>
+                                <Text style={styles.footerText} >ada</Text>
 
                             </View>
                             <View style={styles.ticketBody}>
                                 <View style={styles.infoSection}>
                                     <Text style={styles.label}>Plate No:</Text>
-                                    <Text style={styles.value}>{item.plate_no}</Text>
+                                    <Text style={styles.value}></Text>
                                 </View>
                                 <View style={styles.infoSection}>
                                     <Text style={styles.label}>Driver:</Text>
-                                    <Text style={styles.value}>{item.entity_name}</Text>
+                                    <Text style={styles.value}></Text>
                                 </View>
                                 <View style={styles.infoSection}>
                                     <Text style={styles.label}>Asst. Driver:</Text>
-                                    <Text style={styles.value}>{item.asst_entity_name}</Text>
+                                    <Text style={styles.value}></Text>
                                 </View>
                                 <View style={styles.infoSection}>
                                     <Text style={styles.label}>Dispatched by:</Text>
-                                    <Text style={styles.value}>{item.dispatcher}</Text>
+                                    <Text style={styles.value}></Text>
                                 </View>
                             </View>
                             <View style={styles.ticketFooter}>
-                                <Text style={styles.footerText} >Remarks: {item.remarks}</Text>
+                                <Text style={styles.footerText} >Remarks: </Text>
                             </View>
                         </View>
                     </TouchableOpacity>

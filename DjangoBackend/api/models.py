@@ -75,7 +75,7 @@ class TripBranchModel(models.Model):
         managed = False
         
 class OutslipImagesModel(models.Model):
-    server_id = models.BigIntegerField()
+    server_id = models.BigIntegerField(default=1)
     trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
     upload_id = models.BigAutoField(primary_key=True) #identity
     trip_ticket_detail_id = models.BigIntegerField()

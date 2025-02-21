@@ -1,9 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { BlurView } from 'expo-blur';
+
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
+
 import Carousel from 'react-native-reanimated-carousel';
 import { LogBox } from 'react-native';
 import { Notifier, Easing } from 'react-native-notifier';
@@ -22,7 +25,7 @@ export default function OutslipUpload() {
     });
     LogBox.ignoreLogs(['findDOMNode is deprecated']);
 
-    const [selectedImage, setSelectedImage] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [ocrText, setOcrText] = useState('');
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -34,6 +37,7 @@ export default function OutslipUpload() {
     const [opened, setOpened] = useState(false);
     const [remarks, setRemarks] = useState([]);
     useEffect(() => {
+        setIsLoading(true);
         const fetchData = async () => {
             try {
                 const response = await api.get('/outslipview/', {
@@ -42,6 +46,7 @@ export default function OutslipUpload() {
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
                 console.log("out", response.data);
+                setIsLoading(false);
             } catch (error) {
                 console.error(error);
             }
@@ -116,6 +121,8 @@ export default function OutslipUpload() {
         });
     };
     const handleOCR = async (index) => {
+        setIsLoading(true);
+
         if (!images[index]) {
             Alert.alert('No image selected', 'Please select an image first.');
             return;
@@ -130,7 +137,6 @@ export default function OutslipUpload() {
             const response = await api.post('/ocr/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-            <ActivityIndicator size="large" />
             let newOcrResults = [...ocrResults];
             newOcrResults[index] = response.data.text || 'No text detected';
             setOcrResults(newOcrResults);
@@ -141,9 +147,13 @@ export default function OutslipUpload() {
             console.error('Error during OCR processing:', error);
             Alert.alert('Error', 'Failed to process the image. Please try again.');
         }
+        finally{
+            setIsLoading(false);
+        }
     };
 
     const handleSubmit = async () => {
+        setIsLoading(true);
         const accessToken = await AsyncStorage.getItem('access_token');
         const userData = await AsyncStorage.getItem('user_data');
         const userId = userData ? JSON.parse(userData).user_id : null;
@@ -151,15 +161,6 @@ export default function OutslipUpload() {
         console.log('acotot', userId);
         try {
             const formData = new FormData();
-            /*  images.forEach((imageUri, index) => {
-                 if (imageUri) {
-                     formData.append('image', {
-                         uri: imageUri,
-                         type: 'image/jpeg',
-                         name: `photo_${index}.jpg`,
-                     });
-                 }
-             }); */
             images.forEach((imageUri, index) => {
                 if (imageUri) {
                     const imageType = imageUri.split('.').pop();  // Get the file extension
@@ -172,14 +173,11 @@ export default function OutslipUpload() {
                     });
                 }
             });
-
             formData.append('trip_ticket_detail_id', trip_ticket_detail_id.toString());
             formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
-            formData.append('server_id', '1');
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             formData.append('created_date', createdDate);
             formData.append('created_by', userId);
-            formData.append('server_id', '1');
             if (Array.isArray(ocrResults)) {
                 ocrResults.forEach((ocrResult) => {
                     formData.append('upload_text', ocrResult);
@@ -207,7 +205,6 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-
             console.log('succ', response.data);
         }
         catch (error) {
@@ -231,13 +228,20 @@ export default function OutslipUpload() {
                 Alert.alert('Upload Failed', 'An unexpected error occurred.');
             }
         }
+        finally {
+            setIsLoading(false);
+        }
     };
 
 
     return (
 
         <ScrollView style={styles.container} >
-
+            {isLoading && (
+                <BlurView intensity={400} style={styles.overlayLoading} >
+                    <ActivityIndicator size="large" color="#4CAF50" />
+                </BlurView>
+            )}
             <View style={styles.container1}>
                 <View style={styles.ticketContainer}>
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
@@ -268,6 +272,7 @@ export default function OutslipUpload() {
 
 
             <View style={styles.container2}>
+
                 <Carousel
                     key={images.length}
                     loop={false}
@@ -285,6 +290,7 @@ export default function OutslipUpload() {
 
                             {/* Image Preview & OCR Result Card */}
                             <View style={styles.ocrCard}>
+
                                 <Text style={styles.ocrTitle}>OCR Result:</Text>
                                 <TextInput
                                     style={styles.textOutput}
@@ -382,6 +388,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         flex: 1,
         paddingHorizontal: 10,
+        
     },
     buttonText: {
         color: '#fff',
@@ -453,6 +460,20 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         marginBottom: 20,
+        position: 'relative',
+    },
+    overlayLoading: {
+        position: 'absolute', // Ensures it overlays ocrCard
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: -5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 0, // Matches ocrCard's border
+        backgroundColor: 'rgba(0, 0, 0, 0.3)', // Softer overlay
+
+        zIndex: 10, // Ensure it appears on top
     },
     ocrTitle: {
         fontSize: 16,

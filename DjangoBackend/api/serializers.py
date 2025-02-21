@@ -70,3 +70,4 @@ class OutslipImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = OutslipImagesModel
         fields = '__all__'
+    
