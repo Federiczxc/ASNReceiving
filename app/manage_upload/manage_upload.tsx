@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import api from '../../api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 interface TripUploads {
@@ -9,6 +10,7 @@ interface TripUploads {
     branch_name: string;
     trip_ticket_detail_id: number;
     trans_name: string;
+    ref_trans_date: Date;
 }
 
 export default function TripList() {
@@ -23,8 +25,16 @@ export default function TripList() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await api.get('/triplist/');
-                setTripData(response.data.triplist);
+                const accessToken = await AsyncStorage.getItem('access_token');
+                const response = await api.get('/manage_upload/' , 
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
+                    }
+                );
+                setTripData(response.data.tripdetails);
+                console.log("tripde", response.data.tripdetails);
                 setLoading(false);
             } catch (error) {
                 console.error(error);
@@ -65,7 +75,7 @@ export default function TripList() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Trip List</Text>
+            <Text style={styles.title}>Upload List</Text>
             <TextInput
                 style={styles.searchBar}
                 placeholder="Search by Trip ID"
@@ -78,42 +88,33 @@ export default function TripList() {
             />
             <FlatList
                 data={currentItems}
-                keyExtractor={item => item.trip_ticket_id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
-                        onPress={() =>
+                       /*  onPress={() =>
                             router.push({
-                                pathname: '/trip_list_branch/[id]',
+                                pathname: '/[id]/',
                                 params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
                             })
-                        }
+                        } */
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
                                 <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
-                                <Text style={styles.footerText} >ada</Text>
 
                             </View>
                             <View style={styles.ticketBody}>
                                 <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Plate No:</Text>
-                                    <Text style={styles.value}></Text>
+                                    <Text style={styles.label}>Trans Name:</Text>
+                                    <Text style={styles.value}>{item.trans_name}</Text>
                                 </View>
                                 <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Driver:</Text>
-                                    <Text style={styles.value}></Text>
+                                    <Text style={styles.label}>Branch Name:</Text>
+                                      <Text style={styles.value}>{item.branch_name}</Text>
                                 </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Asst. Driver:</Text>
-                                    <Text style={styles.value}></Text>
-                                </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Dispatched by:</Text>
-                                    <Text style={styles.value}></Text>
-                                </View>
+                          
                             </View>
                             <View style={styles.ticketFooter}>
-                                <Text style={styles.footerText} >Remarks: </Text>
+                            <Text style={styles.footerText} >Trans Date {format(new Date(item.ref_trans_date), 'MMM dd, yyyy')} </Text>
                             </View>
                         </View>
                     </TouchableOpacity>

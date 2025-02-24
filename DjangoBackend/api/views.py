@@ -10,7 +10,6 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.utils.timezone import now
 from PIL import Image
-from datetime import datetime
 
 import logging
 import pytesseract
@@ -64,7 +63,7 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
-        
+        logger.warning("prorpfi", user.user_id)
         serializer = UserSerializer(user)
         return Response(serializer.data)
     
@@ -149,31 +148,40 @@ class TripDetailView(APIView):
 
         return Response(response_data)
 
-class TripDetailView(APIView):
-    permission_classes = [AllowAny]
     
+class ManageTripDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        trip_ticket_id = request.query_params.get('trip_ticket_id')  
-        branch_id = request.query_params.get('branch_id') 
-        if trip_ticket_id:
-            try:
-                tripdetail_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
-                
-                if not tripdetail_data.exists():
-                    return Response({"error": "Trip ticket not found."}, status=404)
-            except ValueError:
-                return Response({"error": "Invalid ID format."}, status=400)
-        else:
-            return Response({"error": "ID is required."}, status=400)
-        
-        tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
-        tripdetails = tripdetail_serializer.data
-        branch_ids = list(set([detail['branch_id'] for detail in tripdetails])) 
-        branch_data = TripBranchModel.objects.using('default').filter(branch_id__in=branch_ids) # match
-        branch_serializer = TripBranchSerializer(branch_data, many=True)
+        user = request.user
+
+        # Get unique trip_ticket_ids from OutslipImagesModel
+        trip_ids = list(
+            OutslipImagesModel.objects.using('default')
+            .filter(created_by=user.user_id)
+            .values_list('trip_ticket_id', flat=True)
+            .distinct()
+        )
+
+        if not trip_ids:
+            return Response({"error": "No trip tickets found."}, status=404)
+
+        logger.warning(f"Unique trip_ticket_ids: {trip_ids}")
+
+        trip_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id__in=trip_ids)
+
+        seen_trip_ids = set()
+        filtered_trip_data = []
+        for trip in trip_data:
+            if trip.trip_ticket_id not in seen_trip_ids:
+                seen_trip_ids.add(trip.trip_ticket_id)
+                filtered_trip_data.append(trip)
+
+        trip_serializer = TripDetailsSerializer(filtered_trip_data, many=True)
+        logger.warning(f"Filtered Trip details: {trip_serializer.data}")
+
         response_data = {
-            'tripdetails': tripdetail_serializer.data,
-            'branches': branch_serializer.data
+            'tripdetails': trip_serializer.data  
         }
 
         return Response(response_data)
@@ -181,6 +189,7 @@ class OutslipDetailView(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
+        
         trip_ticket_detail_id = request.query_params.get('trip_ticket_detail_id')  
         if trip_ticket_detail_id:
             try:

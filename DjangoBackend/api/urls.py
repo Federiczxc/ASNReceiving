@@ -10,4 +10,5 @@ urlpatterns = [
     path('tripbranch/', TripBranchView.as_view(), name='tripbranch'),
     path('outslipview/', OutslipDetailView.as_view(), name='outslipview'),
     path('outslipupload/', UploadOutslipView.as_view(), name='outslipupload'),
+    path('manage_upload/', ManageTripDetailView.as_view(), name='manageupload'),
 ]   

@@ -26,12 +26,6 @@ export default function BotTab() {
                 ),
                 headerShown: false,
             }} />
-            <Tabs.Screen name="trip_list2" options={{
-                title: "OCR",
-                tabBarIcon: ({ color, focused }) => (
-                    <Ionicons name={focused ? "aperture" : "aperture-outline"} color={color} size={24} />
-                ),
-            }} />
         </Tabs>
     );
 }

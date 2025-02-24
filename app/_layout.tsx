@@ -44,6 +44,12 @@ export default function RootLayout() {
               title: 'Outslip Upload', // Set the title here
             }}
           />
+          <Stack.Screen
+            name="manage_upload/manage_upload"
+            options={{
+              title: 'Manage Uploads', // Set the title here
+            }}
+          />
 
         </Stack>
       </NotifierWrapper>

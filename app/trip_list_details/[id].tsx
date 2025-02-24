@@ -3,7 +3,7 @@ import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet,
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
-
+import { format } from 'date-fns';
 interface TripDetails {
     trip_ticket_id: number;
     trip_ticket_detail_id: number;
@@ -11,6 +11,7 @@ interface TripDetails {
     remarks: string;
     branch_charges: number;
     document_amount: number;
+    ref_trans_date: Date;
 }
 
 interface BranchDetails {
@@ -97,6 +98,7 @@ export default function TripListDetails() {
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
                                 <Text style={styles.tripId}>{item.trans_name} #{item.trip_ticket_detail_id}</Text>
+                                <Text style={styles.footerText}>{format(new Date(item.ref_trans_date), 'MMM dd, yyyy')}</Text>
                             </View>
                             <View style={styles.ticketBody}>
                                 <View style={styles.infoSection}>

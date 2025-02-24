@@ -80,7 +80,7 @@ export default function Profile() {
                 <Text style={styles.errorText}>No user data available.</Text>
             )}
             <View style={styles.ticketContainer}>
-                <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
+                <TouchableOpacity onPress={() => router.push('/manage_upload/manage_upload')} activeOpacity={0.7}>
                     <View style={styles.ticketHeader}>
                         <Text style={styles.tripId}>Manage Outslip Uploads</Text>
                     </View>
