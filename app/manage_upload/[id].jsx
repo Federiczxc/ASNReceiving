@@ -13,14 +13,14 @@ import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function OutslipUpload() {
     
-    const [uploadList, setUploadList] = useState({
-        trip_ticket_id: null,
-        trip_ticket_detail_id: null,
-        trans_name: null,
-        remarks: null,
-        branch_charges: null,
-        document_amount: null
-    });
+    const [outslipDetail, setOutslipDetail] = useState({
+            trip_ticket_id: null,
+            trip_ticket_detail_id: null,
+            trans_name: null,
+            remarks: null,
+            branch_charges: null,
+            document_amount: null
+        });
     LogBox.ignoreLogs(['findDOMNode is deprecated']);
 
     const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +42,6 @@ export default function OutslipUpload() {
                     params: { trip_ticket_detail_id }
                 });
                 setOutslipDetail(response.data.tripdetails[0]);
-                setTripBranch(response.data.branches[0]);
                 console.log("out", response.data);
                 setIsLoading(false);
             } catch (error) {
@@ -245,7 +244,6 @@ export default function OutslipUpload() {
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                         <View style={styles.ticketHeader}>
                             <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.trip_ticket_detail_id}</Text>
-                            <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
                         </View>
                         {isExpanded && (
                             <>

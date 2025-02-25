@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import *
+from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
+
 urlpatterns = [
     path('ocr/', OCRView.as_view(), name='ocr'),
     path('login/', LoginView.as_view(), name='login'),
@@ -11,4 +13,6 @@ urlpatterns = [
     path('outslipview/', OutslipDetailView.as_view(), name='outslipview'),
     path('outslipupload/', UploadOutslipView.as_view(), name='outslipupload'),
     path('manage_upload/', ManageTripDetailView.as_view(), name='manageupload'),
+    path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token-verify/', TokenVerifyView.as_view(), name='token_verify'),
 ]   

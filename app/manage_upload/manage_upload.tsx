@@ -10,23 +10,23 @@ interface TripUploads {
     branch_name: string;
     trip_ticket_detail_id: number;
     trans_name: string;
-    ref_trans_date: Date;
 }
 
 export default function TripList() {
     const [tripData, setTripData] = useState<TripUploads[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [hasMore, setHasMore] = useState<boolean>(true);
-
+    const myRefs = React.useRef([])
     const router = useRouter();
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const accessToken = await AsyncStorage.getItem('access_token');
-                const response = await api.get('/manage_upload/' , 
+                const response = await api.get('/manage_upload/',
                     {
                         headers: {
                             Authorization: `Bearer ${accessToken}`,
@@ -34,7 +34,7 @@ export default function TripList() {
                     }
                 );
                 setTripData(response.data.tripdetails);
-                console.log("tripde", response.data.tripdetails);
+                console.log("tripde", JSON.stringify(response.data.tripdetails, null, 2));
                 setLoading(false);
             } catch (error) {
                 console.error(error);
@@ -64,6 +64,13 @@ export default function TripList() {
         }
     };
 
+    const navigate = ({ tite }: { tite: string }) => {
+        router.push({
+            pathname: '/manage_upload/[id]',
+            params: { id: tite },
+        })
+        console.log("tite", tite);
+    };
     if (loading) {
         return (
             <View style={styles.container}>
@@ -89,37 +96,45 @@ export default function TripList() {
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (
-                    <TouchableOpacity
-                       /*  onPress={() =>
-                            router.push({
-                                pathname: '/[id]/',
-                                params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
-                            })
-                        } */
-                    >
-                        <View style={styles.ticketContainer}>
-                            <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
 
-                            </View>
-                            <View style={styles.ticketBody}>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Trans Name:</Text>
-                                    <Text style={styles.value}>{item.trans_name}</Text>
-                                </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Branch Name:</Text>
-                                      <Text style={styles.value}>{item.branch_name}</Text>
-                                </View>
-                          
-                            </View>
-                            <View style={styles.ticketFooter}>
-                            <Text style={styles.footerText} >Trans Date {format(new Date(item.ref_trans_date), 'MMM dd, yyyy')} </Text>
-                            </View>
+                    <View style={styles.ticketContainer}>
+                        <View style={styles.ticketHeader}>
+                            <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
                         </View>
-                    </TouchableOpacity>
+
+                        {Array.isArray(item.trip_ticket_detail_id) && (
+                            <View style={styles.ticketBody}>
+                                {item.trip_ticket_detail_id.map((detail, index) => (
+                                    <TouchableOpacity onPress={() =>
+                                        router.push({
+                                            pathname: '/manage_upload/[id]',
+                                            params: { id: detail.trip_ticket_detail_id },
+                                        })
+                                    }>
+                                        <View key={index} style={styles.infoSection}>
+                                            <Text style={styles.label}>Outslip ID:{detail.trip_ticket_detail_id}
+                                            </Text>
+                                            {/*   <Text style={styles.value}>{format(new Date(detail.ref_trans_date), 'MMM dd, yyyy')}</Text> */}
+                                            <Text style={styles.value}>{detail.branch_name} </Text>
+
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+                        <View style={styles.ticketFooter}>
+                            <Text style={styles.footerText}>
+                                {Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                    ? item.trip_ticket_detail_id[0].trans_name
+                                    : 'N/A'}
+                            </Text>
+                        </View>
+
+
+                    </View>
                 )}
             />
+
             <View style={styles.paginationButtons}>
                 <Button title="Previous" onPress={handlePrevPage} disabled={currentPage === 1} />
                 <Button title="Next" onPress={handleNextPage} disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)} />
@@ -172,12 +187,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     ticketBody: {
-        padding: 10,
     },
     infoSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 15,
+        borderWidth: 0.5,
+        padding: 10
     },
     label: {
         fontSize: 16,

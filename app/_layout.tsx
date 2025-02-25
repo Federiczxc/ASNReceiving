@@ -50,7 +50,12 @@ export default function RootLayout() {
               title: 'Manage Uploads', // Set the title here
             }}
           />
-
+          <Stack.Screen
+            name="manage_upload/[id]"
+            options={{
+              title: 'Edit Outslip Upload', // Set the title here
+            }}
+          />
         </Stack>
       </NotifierWrapper>
     </GestureHandlerRootView>

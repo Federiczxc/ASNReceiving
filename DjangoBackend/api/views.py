@@ -156,19 +156,15 @@ class ManageTripDetailView(APIView):
         user = request.user
 
         # Get unique trip_ticket_ids from OutslipImagesModel
-        trip_ids = list(
-            OutslipImagesModel.objects.using('default')
-            .filter(created_by=user.user_id)
-            .values_list('trip_ticket_id', flat=True)
-            .distinct()
-        )
+        user_trips = OutslipImagesModel.objects.using('default').filter(created_by=user.user_id)
+        trip_ids = list(user_trips.values_list('trip_ticket_id', flat=True).distinct())
+        trip_detail_ids = list(user_trips.values_list('trip_ticket_detail_id', flat=True).distinct())
 
-        if not trip_ids:
+        if not trip_ids or not trip_detail_ids:
             return Response({"error": "No trip tickets found."}, status=404)
 
-        logger.warning(f"Unique trip_ticket_ids: {trip_ids}")
-
-        trip_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id__in=trip_ids)
+        logger.warning(f"Unique trip_ticket_ids: {trip_ids}, trip_ticket_detail_ids: {trip_detail_ids}")
+        trip_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id__in=trip_ids, trip_ticket_detail_id__in=trip_detail_ids)
 
         seen_trip_ids = set()
         filtered_trip_data = []
@@ -177,14 +173,39 @@ class ManageTripDetailView(APIView):
                 seen_trip_ids.add(trip.trip_ticket_id)
                 filtered_trip_data.append(trip)
 
+        grouped_trips = {}
+        for trip in trip_data:
+            if trip.trip_ticket_id not in grouped_trips:
+                grouped_trips[trip.trip_ticket_id] = {
+                    "trip_ticket_id": trip.trip_ticket_id,
+                    "trip_ticket_detail_id": [],
+                }
+            grouped_trips[trip.trip_ticket_id]["trip_ticket_detail_id"].append({
+                "trip_ticket_detail_id": trip.trip_ticket_detail_id,
+                "trip_ticket_id": trip.trip_ticket_id,
+                "trans_name": trip.trans_name,
+                "branch_name": trip.branch_name,
+                "ref_trans_date": trip.ref_trans_date,
+            })
+        logger.warning(f"booorat, {list(grouped_trips.values())}")
         trip_serializer = TripDetailsSerializer(filtered_trip_data, many=True)
         logger.warning(f"Filtered Trip details: {trip_serializer.data}")
 
         response_data = {
-            'tripdetails': trip_serializer.data  
+            'tripdetails': list(grouped_trips.values())
         }
 
         return Response(response_data)
+    
+class ManageUploadedPictures(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        trip_ticket_detail_id = request.query_params.get('id')
+        
+        if trip_ticket_detail_id:
+                upload_data = OutslipImagesModel.objects.using('default').filter(trip_ticket_detail_id__in=trip_ticket_detail_id)
 class OutslipDetailView(APIView):
     permission_classes = [AllowAny]
     
