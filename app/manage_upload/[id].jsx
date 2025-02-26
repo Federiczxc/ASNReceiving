@@ -12,15 +12,15 @@ import { LogBox } from 'react-native';
 import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function OutslipUpload() {
-    
     const [outslipDetail, setOutslipDetail] = useState({
-            trip_ticket_id: null,
-            trip_ticket_detail_id: null,
-            trans_name: null,
-            remarks: null,
-            branch_charges: null,
-            document_amount: null
-        });
+        trip_ticket_id: null,
+        trip_ticket_detail_id: null,
+        trans_name: null,
+        remarks: null,
+        branch_charges: null,
+        document_amount: null
+    });
+    const [uploadOutslip, setUploadOutslip] = useState([]);
     LogBox.ignoreLogs(['findDOMNode is deprecated']);
 
     const [isLoading, setIsLoading] = useState(true);
@@ -38,11 +38,25 @@ export default function OutslipUpload() {
         setIsLoading(true);
         const fetchData = async () => {
             try {
-                const response = await api.get('/outslipview/', {
-                    params: { trip_ticket_detail_id }
+                const accessToken = await AsyncStorage.getItem('access_token');
+                const response = await api.get('/manage-upload-pics/', {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    },
+                    params: { id: trip_ticket_detail_id }
+
                 });
-                setOutslipDetail(response.data.tripdetails[0]);
-                console.log("out", response.data);
+                const uploadData = response.data.upload_data;
+                setUploadOutslip(uploadData);
+                setOutslipDetail(response.data.trip_details[0]);
+                setImages(uploadData.map(item => item.upload_files));
+                setOcrResults(uploadData.map(item => item.upload_text));
+                setRemarks(uploadData.map(item => item.upload_remarks));
+                console.log("supotot", uploadData);
+                console.log("tule", response.data.trip_details[0]);
+                console.log("ima", uploadData.map(item => item.upload_files));
+                console.log("ocrocr", uploadData.map(item => item.upload_text));
+                console.log("rere", uploadData.map(item => item.upload_remarks));
                 setIsLoading(false);
             } catch (error) {
                 console.error(error);
@@ -68,7 +82,7 @@ export default function OutslipUpload() {
         setOcrResults([...ocrResults, '']);
         setRemarks([...remarks, '']);
         console.log("imaima", images)
-
+        console.log("adad",);
         requestAnimationFrame(() => {
             Notifier.showNotification({
                 title: 'Success',
@@ -144,7 +158,7 @@ export default function OutslipUpload() {
             console.error('Error during OCR processing:', error);
             Alert.alert('Error', 'Failed to process the image. Please try again.');
         }
-        finally{
+        finally {
             setIsLoading(false);
         }
     };
@@ -170,11 +184,8 @@ export default function OutslipUpload() {
                     });
                 }
             });
-            formData.append('trip_ticket_detail_id', trip_ticket_detail_id.toString());
-            formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
+            formData.append('trip_ticket_detail_id', outslipDetail[0]?.trip_ticket_detail_id.toString());
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            formData.append('created_date', createdDate);
-            formData.append('created_by', userId);
             if (Array.isArray(ocrResults)) {
                 ocrResults.forEach((ocrResult) => {
                     formData.append('upload_text', ocrResult);
@@ -274,7 +285,7 @@ export default function OutslipUpload() {
                     loop={false}
                     width={Dimensions.get('window').width * 1}
                     height={500}
-                    data={images}
+                    data={uploadOutslip}
                     scrollAnimationDuration={200}
                     onProgressChange={(_, absoluteProgress) => {
                         const newIndex = Math.round(absoluteProgress);
@@ -384,7 +395,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         flex: 1,
         paddingHorizontal: 10,
-        
+
     },
     buttonText: {
         color: '#fff',

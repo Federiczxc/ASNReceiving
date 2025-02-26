@@ -5,6 +5,8 @@ import api from '../../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
+import { LogBox } from 'react-native';
+
 interface TripUploads {
     trip_ticket_id: number;
     branch_name: string;
@@ -22,6 +24,7 @@ export default function TripList() {
     const [hasMore, setHasMore] = useState<boolean>(true);
     const myRefs = React.useRef([])
     const router = useRouter();
+    LogBox.ignoreLogs(["Each child in a list should have a unique key"]);
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -64,13 +67,7 @@ export default function TripList() {
         }
     };
 
-    const navigate = ({ tite }: { tite: string }) => {
-        router.push({
-            pathname: '/manage_upload/[id]',
-            params: { id: tite },
-        })
-        console.log("tite", tite);
-    };
+  
     if (loading) {
         return (
             <View style={styles.container}>
@@ -105,13 +102,13 @@ export default function TripList() {
                         {Array.isArray(item.trip_ticket_detail_id) && (
                             <View style={styles.ticketBody}>
                                 {item.trip_ticket_detail_id.map((detail, index) => (
-                                    <TouchableOpacity onPress={() =>
+                                    <TouchableOpacity key={index} onPress={() =>
                                         router.push({
                                             pathname: '/manage_upload/[id]',
                                             params: { id: detail.trip_ticket_detail_id },
                                         })
                                     }>
-                                        <View key={index} style={styles.infoSection}>
+                                        <View style={styles.infoSection}>
                                             <Text style={styles.label}>Outslip ID:{detail.trip_ticket_detail_id}
                                             </Text>
                                             {/*   <Text style={styles.value}>{format(new Date(detail.ref_trans_date), 'MMM dd, yyyy')}</Text> */}

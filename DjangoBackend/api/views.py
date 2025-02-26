@@ -10,6 +10,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.utils.timezone import now
 from PIL import Image
+from django.conf import settings
 
 import logging
 import pytesseract
@@ -205,7 +206,55 @@ class ManageUploadedPictures(APIView):
         trip_ticket_detail_id = request.query_params.get('id')
         
         if trip_ticket_detail_id:
-                upload_data = OutslipImagesModel.objects.using('default').filter(trip_ticket_detail_id__in=trip_ticket_detail_id)
+            try:
+                upload_data = OutslipImagesModel.objects.using('default').filter(trip_ticket_detail_id=trip_ticket_detail_id, created_by = user.user_id)
+                tripdetails_data = TripDetailsModel.objects.using('default').filter(trip_ticket_detail_id=trip_ticket_detail_id)
+                if not upload_data.exists():
+                    return Response({"error": "Trip ticket Detail not found."}, status=404)
+            except ValueError:
+                return Response ({"error": "Invalid Format"}, status=404)
+        else:
+            return Response({"Error": "ID is required."}, status=400)
+        
+        upload_data_serializer = OutslipImagesSerializer(upload_data, many=True)
+        tripdetails_data_serializer = TripDetailsSerializer(tripdetails_data, many=True)
+        uploadDetails = upload_data_serializer.data
+        logger.warning(f"tite: {uploadDetails}" )
+        response_data = {
+            'upload_data':uploadDetails,
+            'trip_details':tripdetails_data_serializer.data
+        }
+        return Response(response_data)
+    
+class EditUploadedPictures(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        upload_images = request.FILES.getlist('image',)    #should be same name from frointend
+        upload_remarks = request.data.getlist('upload_remarks', '')
+        upload_text = request.data.getlist('upload_text', '')
+        trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
+        get_data = OutslipImagesModel.objects.filter(trip_ticket_detail_id=trip_ticket_detail_id)
+        
+        for i, image in enumerate(get_data):
+            if i < len(upload_remarks):
+                image.upload_remarks = upload_remarks[i]
+            if i < len(upload_text):
+                image.upload_text = upload_text[i]
+                image.save()
+                
+        for i, upload_image in enumerate(upload_images):
+            remark = upload_remarks[i] if i < len(upload_remarks) else ''
+            upload_txt = upload_text[i] if i < len(upload_text) else ''
+            
+            new_image = OutslipImagesModel(
+                trip_ticket_detail_id=trip_ticket_detail_id,
+                upload_files=upload_image,
+                upload_remarks=remark,
+                upload_text=upload_txt
+            )
+            new_image.save()
+        return Response ({'message': 'Update successful'}, status=status.HTTP_200_OK)
 class OutslipDetailView(APIView):
     permission_classes = [AllowAny]
     
@@ -288,7 +337,8 @@ class UploadOutslipView(APIView):
                 try:
                     file_path = f'outslips/{upload_image.name}'
                     saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
-                    file_url = default_storage.url(saved_path)
+                    base_url = settings.BASE_URL
+                    file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
                     outslip_image = serializer.save(
                         upload_files=file_url,
                         trip_ticket_id = trip_ticket_id,
