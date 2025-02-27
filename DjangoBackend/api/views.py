@@ -11,6 +11,7 @@ from django.core.files.base import ContentFile
 from django.utils.timezone import now
 from PIL import Image
 from django.conf import settings
+from django.utils import timezone
 
 import logging
 import pytesseract
@@ -226,35 +227,7 @@ class ManageUploadedPictures(APIView):
         }
         return Response(response_data)
     
-class EditUploadedPictures(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        upload_images = request.FILES.getlist('image',)    #should be same name from frointend
-        upload_remarks = request.data.getlist('upload_remarks', '')
-        upload_text = request.data.getlist('upload_text', '')
-        trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
-        get_data = OutslipImagesModel.objects.filter(trip_ticket_detail_id=trip_ticket_detail_id)
-        
-        for i, image in enumerate(get_data):
-            if i < len(upload_remarks):
-                image.upload_remarks = upload_remarks[i]
-            if i < len(upload_text):
-                image.upload_text = upload_text[i]
-                image.save()
-                
-        for i, upload_image in enumerate(upload_images):
-            remark = upload_remarks[i] if i < len(upload_remarks) else ''
-            upload_txt = upload_text[i] if i < len(upload_text) else ''
-            
-            new_image = OutslipImagesModel(
-                trip_ticket_detail_id=trip_ticket_detail_id,
-                upload_files=upload_image,
-                upload_remarks=remark,
-                upload_text=upload_txt
-            )
-            new_image.save()
-        return Response ({'message': 'Update successful'}, status=status.HTTP_200_OK)
+
 class OutslipDetailView(APIView):
     permission_classes = [AllowAny]
     
@@ -364,3 +337,51 @@ class UploadOutslipView(APIView):
                 'errors': errors if errors else None
             }, status=status.HTTP_201_CREATED)
         return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+class EditUploadedPictures(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        upload_images = request.FILES.getlist('image',)    #should be same name from frointend
+        upload_remarks = request.data.getlist('upload_remarks', '')
+        upload_text = request.data.getlist('upload_text', '')
+        trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
+        trip_ticket_id = request.data.get('trip_ticket_id')
+        user_id = request.user.user_id
+        try: 
+        
+            get_data = OutslipImagesModel.objects.filter(trip_ticket_detail_id=trip_ticket_detail_id)
+            
+            for i, image in enumerate(get_data):
+                if i < len(upload_remarks):
+                    image.upload_remarks = upload_remarks[i]
+                if i < len(upload_text):
+                    image.upload_text = upload_text[i]
+                    image.updated_by = user_id
+                    image.updated_date = timezone.now()
+                    image.save()
+                    
+            for i, upload_image in enumerate(upload_images):
+                if i >= len(get_data):
+                    
+                    
+                    remark = upload_remarks[i] if i < len(upload_remarks) else ''
+                    upload_txt = upload_text[i] if i < len(upload_text) else ''
+                    file_path = f'outslips/{upload_image.name}'
+                    saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
+                    file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
+                    new_image = OutslipImagesModel(
+                        trip_ticket_detail_id=trip_ticket_detail_id,
+                        trip_ticket_id = trip_ticket_id,
+                        upload_files=file_url,
+                        upload_remarks=remark,
+                        upload_text=upload_txt,
+                        created_by = user_id,
+                        created_date = timezone.now(),
+                        updated_by = user_id,
+                        updated_date = timezone.now()
+                    )
+                    new_image.save()
+            return Response ({'message': 'Update successful'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

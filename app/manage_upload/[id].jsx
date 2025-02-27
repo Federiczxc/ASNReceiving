@@ -78,9 +78,14 @@ export default function OutslipUpload() {
         }
     };
     const addNewSlide = () => {
-        setImages([...images, null]); // Add a new empty slide
-        setOcrResults([...ocrResults, '']);
-        setRemarks([...remarks, '']);
+        setImages(prevImages => {
+            const newImages = [...prevImages, null];
+            setOcrResults(prevOcr => [...prevOcr, '']);
+            setRemarks(prevRemarks => [...prevRemarks, '']);
+            setUploadOutslip(prevUpload => [...prevUpload, {}]); // Update the data used in Carousel
+            setCurrentIndex(newImages.length - 1); // Move to the new slide
+            return newImages;
+        });
         console.log("imaima", images)
         console.log("adad",);
         requestAnimationFrame(() => {
@@ -184,7 +189,8 @@ export default function OutslipUpload() {
                     });
                 }
             });
-            formData.append('trip_ticket_detail_id', outslipDetail[0]?.trip_ticket_detail_id.toString());
+            formData.append('trip_ticket_detail_id', outslipDetail.trip_ticket_detail_id.toString());
+            formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             if (Array.isArray(ocrResults)) {
                 ocrResults.forEach((ocrResult) => {
@@ -202,10 +208,10 @@ export default function OutslipUpload() {
                 formData.append('upload_remarks', '');
             }
             console.log("paso", formData);
-            const response = await api.post('/outslipupload/', formData, {
+            const response = await api.post('/edit-upload-pics/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    /* 'Authorization': `Bearer ${accessToken}`, */
+                    'Authorization': `Bearer ${accessToken}`,
                 },
             });
             Notifier.showNotification({
