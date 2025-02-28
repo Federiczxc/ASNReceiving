@@ -12,6 +12,8 @@ interface TripUploads {
     branch_name: string;
     trip_ticket_detail_id: number;
     trans_name: string;
+    ref_trans_date: Date;
+
 }
 
 export default function TripList() {
@@ -97,6 +99,10 @@ export default function TripList() {
                     <View style={styles.ticketContainer}>
                         <View style={styles.ticketHeader}>
                             <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
+                            <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                    ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy') 
+                                    : 'N/A'}</Text>
+
                         </View>
 
                         {Array.isArray(item.trip_ticket_detail_id) && (
@@ -111,7 +117,6 @@ export default function TripList() {
                                         <View style={styles.infoSection}>
                                             <Text style={styles.label}>Outslip ID:{detail.trip_ticket_detail_id}
                                             </Text>
-                                            {/*   <Text style={styles.value}>{format(new Date(detail.ref_trans_date), 'MMM dd, yyyy')}</Text> */}
                                             <Text style={styles.value}>{detail.branch_name} </Text>
 
                                         </View>

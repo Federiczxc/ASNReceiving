@@ -4,7 +4,7 @@ import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, Sty
 import { BlurView } from 'expo-blur';
 
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 
 import Carousel from 'react-native-reanimated-carousel';
@@ -13,6 +13,7 @@ import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function OutslipUpload() {
     const [outslipDetail, setOutslipDetail] = useState({
+        upload_id: null,
         trip_ticket_id: null,
         trip_ticket_detail_id: null,
         trans_name: null,
@@ -33,6 +34,7 @@ export default function OutslipUpload() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [editableOcrText, setEditableOcrText] = useState(ocrText);
     const [opened, setOpened] = useState(false);
+    const [removedImageIds, setRemovedImageIds] = useState([]);
     const [remarks, setRemarks] = useState([]);
     useEffect(() => {
         setIsLoading(true);
@@ -112,10 +114,18 @@ export default function OutslipUpload() {
         let updatedRemarks = [...remarks];
         updatedRemarks.splice(index, 1);
 
+        let updatedUploadOutslip = [...uploadOutslip];
+        updatedUploadOutslip.splice(index, 1);
+
         setImages(updatedImages);
         setOcrResults(updatedOcrResults);
         setRemarks(updatedRemarks);
+        setUploadOutslip(updatedUploadOutslip);
 
+        if (uploadOutslip[index]?.upload_id) {
+            setRemovedImageIds(prevIds => [...prevIds, uploadOutslip[index].upload_id]);
+            console.log("removed", removedImageIds);
+        }
         // Adjust the currentIndex to point to a valid slide
         let newIndex = currentIndex;
         if (currentIndex === index) {
@@ -179,6 +189,9 @@ export default function OutslipUpload() {
             const formData = new FormData();
             images.forEach((imageUri, index) => {
                 if (imageUri) {
+                    if (typeof imageUri === 'string' && imageUri.startsWith('http')) {
+                        formData.append('existing_images', imageUri);
+                    }
                     const imageType = imageUri.split('.').pop();  // Get the file extension
                     const mimeType = `image/${imageType}`;  // Create the MIME type
 
@@ -187,8 +200,12 @@ export default function OutslipUpload() {
                         type: mimeType,  // Use the dynamic MIME type
                         name: `photo_${index}.${imageType}`,  // Use the correct file extension
                     });
+
                 }
             });
+            removedImageIds.forEach(id => {
+                formData.append('removed_ids', id)
+            })
             formData.append('trip_ticket_detail_id', outslipDetail.trip_ticket_detail_id.toString());
             formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -219,6 +236,7 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
+            router.push('/manage_upload/manage_upload')
             console.log('succ', response.data);
         }
         catch (error) {

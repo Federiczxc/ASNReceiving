@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
+from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = '/media/'  # URL prefix for media files
@@ -46,6 +46,8 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "api.User"
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'user_id',
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFREHS_TOKEN_LIFETIME': timedelta(days=1)
 }
 REST_AUTH = {
     'USE_JWT': True,

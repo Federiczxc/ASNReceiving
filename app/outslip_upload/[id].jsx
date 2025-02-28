@@ -4,7 +4,7 @@ import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, Sty
 import { BlurView } from 'expo-blur';
 
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 
 import Carousel from 'react-native-reanimated-carousel';
@@ -205,6 +205,7 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
+            router.push('/manage_upload/manage_upload')
             console.log('succ', response.data);
         }
         catch (error) {

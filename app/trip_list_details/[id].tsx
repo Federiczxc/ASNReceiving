@@ -4,6 +4,8 @@ import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { format } from 'date-fns';
+import Ionicons from "@expo/vector-icons/Ionicons";
+
 interface TripDetails {
     trip_ticket_id: number;
     trip_ticket_detail_id: number;
@@ -82,6 +84,10 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
+            <TouchableOpacity>
+                <View style={styles.attendanceButton}> <Text> Clock in <Ionicons name={"alarm-outline"}  size={24} /> </Text></View>
+            </TouchableOpacity>
+
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (
@@ -126,6 +132,11 @@ export default function TripListDetails() {
 }
 
 const styles = StyleSheet.create({
+    attendanceButton: {
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 10,
+    },
     container: {
         flex: 1,
         justifyContent: 'center',
@@ -152,7 +163,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#333',
         borderRadius: 15,
-        marginVertical: 35,
+        marginVertical: 20,
         overflow: 'hidden',
         width: 320,
         backgroundColor: '#fff',

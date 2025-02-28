@@ -343,16 +343,24 @@ class EditUploadedPictures(APIView):
     
     def post(self, request):
         upload_images = request.FILES.getlist('image',)    #should be same name from frointend
+        existing_images = request.data.getlist('existing_images', [])
         upload_remarks = request.data.getlist('upload_remarks', '')
         upload_text = request.data.getlist('upload_text', '')
         trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
         trip_ticket_id = request.data.get('trip_ticket_id')
+        removed_ids = request.data.getlist('removed_ids', [])
         user_id = request.user.user_id
+        logger.warning("removed", removed_ids)
         try: 
-        
-            get_data = OutslipImagesModel.objects.filter(trip_ticket_detail_id=trip_ticket_detail_id)
-            
-            for i, image in enumerate(get_data):
+            if removed_ids:
+                OutslipImagesModel.objects.filter(upload_id__in=removed_ids).delete()
+            get_data = OutslipImagesModel.objects.filter(trip_ticket_detail_id=trip_ticket_detail_id)    
+            existing_image_objects = OutslipImagesModel.objects.filter(
+                trip_ticket_detail_id=trip_ticket_detail_id,
+                upload_files__in=existing_images  # Filter by existing image URLs
+                
+            )
+            for i, image in enumerate(existing_image_objects):
                 if i < len(upload_remarks):
                     image.upload_remarks = upload_remarks[i]
                 if i < len(upload_text):
