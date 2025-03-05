@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import api from '../../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +31,10 @@ export default function TripList() {
         const fetchData = async () => {
             try {
                 const accessToken = await AsyncStorage.getItem('access_token');
+                if (!accessToken) {
+                    Alert.alert('Error', 'No access token found. Please log in.');
+                    return;
+                }
                 const response = await api.get('/manage_upload/',
                     {
                         headers: {
@@ -38,11 +42,24 @@ export default function TripList() {
                         },
                     }
                 );
-                setTripData(response.data.tripdetails);
-                console.log("tripde", JSON.stringify(response.data.tripdetails, null, 2));
-                setLoading(false);
-            } catch (error) {
+                if (response.status === 200 && response.data.tripdetails.length > 0) {
+                    setTripData(response.data.tripdetails);
+                    console.log("tite", response);
+                    console.log("tripde", JSON.stringify(response.data.tripdetails, null, 2));
+                }
+                else {
+                    setTripData([]);
+                    console.log("titelse", response.data);
+
+                }
+            } catch (error: any) {
                 console.error(error);
+                if (error.response?.status === 404) {
+                    setTripData([]);
+
+                }
+            }
+            finally {
                 setLoading(false);
             }
         };
@@ -69,7 +86,7 @@ export default function TripList() {
         }
     };
 
-  
+
     if (loading) {
         return (
             <View style={styles.container}>
@@ -81,66 +98,80 @@ export default function TripList() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Upload List</Text>
-            <TextInput
-                style={styles.searchBar}
-                placeholder="Search by Trip ID"
-                keyboardType="numeric"
-                value={searchQuery}
-                onChangeText={(text) => {
-                    setSearchQuery(text);
-                    setCurrentPage(1); // Reset to first page on new search
-                }}
-            />
-            <FlatList
-                data={currentItems}
-                renderItem={({ item }) => (
+            {loading ? (
+                <>
+                    <Text>Loading...</Text>
+                    <ActivityIndicator size="large" color="#0000ff" />
+                </>
+            ) : tripData.length === 0 ? (
+                <Text style={styles.errorText}>No upload data available.</Text>
 
-                    <View style={styles.ticketContainer}>
-                        <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
-                            <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
-                                    ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy') 
-                                    : 'N/A'}</Text>
+            ) : (
+                <>
+                    <Text style={styles.title}>Upload List</Text>
+                    <TextInput
+                        style={styles.searchBar}
+                        placeholder="Search by Trip ID"
+                        keyboardType="numeric"
+                        value={searchQuery}
+                        onChangeText={(text) => {
+                            setSearchQuery(text);
+                            setCurrentPage(1); // Reset to first page on new search
+                        }}
+                    />
+                    <FlatList
+                        data={currentItems}
+                        renderItem={({ item }) => (
 
-                        </View>
+                            <View style={styles.ticketContainer}>
+                                <View style={styles.ticketHeader}>
+                                    <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
+                                    <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                        ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
+                                        : 'N/A'}</Text>
 
-                        {Array.isArray(item.trip_ticket_detail_id) && (
-                            <View style={styles.ticketBody}>
-                                {item.trip_ticket_detail_id.map((detail, index) => (
-                                    <TouchableOpacity key={index} onPress={() =>
-                                        router.push({
-                                            pathname: '/manage_upload/[id]',
-                                            params: { id: detail.trip_ticket_detail_id },
-                                        })
-                                    }>
-                                        <View style={styles.infoSection}>
-                                            <Text style={styles.label}>Outslip ID:{detail.trip_ticket_detail_id}
-                                            </Text>
-                                            <Text style={styles.value}>{detail.branch_name} </Text>
+                                </View>
 
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
+                                {Array.isArray(item.trip_ticket_detail_id) && (
+                                    <View style={styles.ticketBody}>
+                                        {item.trip_ticket_detail_id.map((detail, index) => (
+                                            <TouchableOpacity key={index} onPress={() =>
+                                                router.push({
+                                                    pathname: '/manage_upload/[id]',
+                                                    params: { id: detail.trip_ticket_detail_id },
+                                                })
+                                            }>
+                                                <View style={styles.infoSection}>
+                                                    <Text style={styles.label}>Outslip ID:{detail.trip_ticket_detail_id}
+                                                    </Text>
+                                                    <Text style={styles.value}>{detail.branch_name} </Text>
+
+                                                </View>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+                                <View style={styles.ticketFooter}>
+                                    <Text style={styles.footerText}>
+                                        {Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                            ? item.trip_ticket_detail_id[0].trans_name
+                                            : 'N/A'}
+                                    </Text>
+                                </View>
+
+
                             </View>
                         )}
-                        <View style={styles.ticketFooter}>
-                            <Text style={styles.footerText}>
-                                {Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
-                                    ? item.trip_ticket_detail_id[0].trans_name
-                                    : 'N/A'}
-                            </Text>
-                        </View>
+                    />
 
 
+                    <View style={styles.paginationButtons}>
+                        <Button title="Previous" onPress={handlePrevPage} disabled={currentPage === 1} />
+                        <Button title="Next" onPress={handleNextPage} disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)} />
                     </View>
-                )}
-            />
+                </>
+            )}
 
-            <View style={styles.paginationButtons}>
-                <Button title="Previous" onPress={handlePrevPage} disabled={currentPage === 1} />
-                <Button title="Next" onPress={handleNextPage} disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)} />
-            </View>
         </View>
     );
 }
@@ -152,6 +183,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         backgroundColor: 'ffd33d'
+    },
+    errorText: {
+        fontSize: 16,
+        color: 'red',
     },
     title: {
         fontSize: 24,

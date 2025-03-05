@@ -5,6 +5,7 @@ import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { format } from 'date-fns';
 import Ionicons from "@expo/vector-icons/Ionicons";
+import axios from 'axios';
 
 interface TripDetails {
     trip_ticket_id: number;
@@ -14,6 +15,7 @@ interface TripDetails {
     branch_charges: number;
     document_amount: number;
     ref_trans_date: Date;
+    branch_name: string;
 }
 
 interface BranchDetails {
@@ -72,6 +74,17 @@ export default function TripListDetails() {
             setCurrentPage(prevPage => prevPage - 1);
         }
     };
+    const timeIn = async () => {
+        console.log("titest ", new Date())
+        console.log("timetript ", TripDetails)
+        try {
+            const response = await api.get("/retrieve-location/");
+            console.log("locloc", response.data);
+        } catch (error) {   
+            console.error("Error fetching location:", error);
+        }
+    }
+
 
     if (loading) {
         return (
@@ -84,8 +97,13 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
-            <TouchableOpacity>
-                <View style={styles.attendanceButton}> <Text> Clock in <Ionicons name={"alarm-outline"}  size={24} /> </Text></View>
+            <TouchableOpacity onPress={timeIn}>
+                <View style={styles.attendanceButton}>
+                    <Text>
+                        Clock in
+                        <Ionicons name={"alarm-outline"} size={24} />
+                    </Text>
+                </View>
             </TouchableOpacity>
 
             <FlatList

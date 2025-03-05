@@ -12,9 +12,11 @@ from django.utils.timezone import now
 from PIL import Image
 from django.conf import settings
 from django.utils import timezone
-
+from django.contrib.gis.geoip2 import GeoIP2
 import logging
 import pytesseract
+from django.http import JsonResponse
+
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 logger = logging.getLogger(__name__)
 
@@ -161,7 +163,8 @@ class ManageTripDetailView(APIView):
         user_trips = OutslipImagesModel.objects.using('default').filter(created_by=user.user_id)
         trip_ids = list(user_trips.values_list('trip_ticket_id', flat=True).distinct())
         trip_detail_ids = list(user_trips.values_list('trip_ticket_detail_id', flat=True).distinct())
-
+        if not user_trips.exists():
+            return Response({"tripdetails": []}, status=status.HTTP_200_OK)
         if not trip_ids or not trip_detail_ids:
             return Response({"error": "No trip tickets found."}, status=404)
 
@@ -337,7 +340,9 @@ class UploadOutslipView(APIView):
                 'errors': errors if errors else None
             }, status=status.HTTP_201_CREATED)
         return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+#class ClockInAttendance(APIView):
 class EditUploadedPictures(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -393,3 +398,25 @@ class EditUploadedPictures(APIView):
             return Response ({'message': 'Update successful'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class RetrieveLocationView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        user_ip = self.get_client_ip(request)
+        g = GeoIP2()
+        
+        try:
+            location_data = g.city(user_ip)  # Fetch location details
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+        
+        return Response({"ip": user_ip, "location": location_data})
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip

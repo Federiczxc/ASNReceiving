@@ -18,6 +18,7 @@ urlpatterns = [
     path('token-verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('manage-upload-pics/', ManageUploadedPictures.as_view(), name='managepics'),
     path('edit-upload-pics/', EditUploadedPictures.as_view(), name='editpics'),
+    path('retrieve-location/', RetrieveLocationView.as_view(), name='retrievelocation')
 ]   
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -117,6 +117,12 @@ class OutslipImagesModel(models.Model):
         is_fap = models.BooleanField(default=False)
         is_candis = models.BooleanField(default=False)
         is_posted = models.BooleanField(default=False)
+        location_in = models.CharField(max_length=255, null=True)
+        ip_address_in = models.CharField(max_length=255,null=True)
+        location_out = models.CharField(max_length=255, null=True)
+        ip_address_out = models.CharField(max_length=255,null=True)
+        latitude_in = models.FloatField(null=True, blank=True)
+        longitude_out = models.FloatField(null=True, blank=True)
             
         class Meta:
             db_table = 'scm_tr_trip_ticket_branch_logs'

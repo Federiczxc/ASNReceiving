@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = '/media/'  # URL prefix for media files
@@ -26,7 +27,7 @@ SECRET_KEY = 'django-insecure-w7qolrc)hfzt-l80rvs-p*mzknxh^soeuy*e^=2@9n2(-1tj=q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126", "192.168.70.190", "mis-federick"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.70.190", "mis-federick"]
 
 BASE_URL = "http://176.16.1.126:8000/api"
 # Application definition
@@ -78,7 +79,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",  # 
     "http://176.16.1.126:8081",  
     "http://127.0.0.1:8081",
-    "http://10.0.2.2:8081",  # Allow your frontend origin
+    "http://103.240.120.34:8081",
+    "http://10.0.2.2:8081",
+    "http://192.168.1.200:8081"# Allow your frontend origin
     # Add this for development if needed
 ]
 CORS_ORIGIN_ALLOW_ALL = True
@@ -106,7 +109,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'DjangoBackend.wsgi.application'
 
-
+GEOIP_PATH = os.path.join(BASE_DIR, 'outslips')
+GEOIP_DATABASE = 'GeoLite2-City.mmdb'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
   # 'default': {
@@ -130,7 +134,9 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
+AUTHENTICATION_BACKENDS = [
+    'api.DjangoBackend.passwordAuth',  # Path to your custom backend
+]
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
