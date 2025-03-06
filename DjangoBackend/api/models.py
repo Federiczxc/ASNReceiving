@@ -100,35 +100,35 @@ class OutslipImagesModel(models.Model):
                 models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='outslip_images_composite_pk') #not working so manual it sa mssql
             ] """
     
-    
-    class TripTicketBranchLogsModel(models.Model):
-        server_id = models.BigIntegerField()
-        trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
-        log_id = models.BigAutoField(primary_key=True) #identity
-        trip_ticket_detail_id = models.BigIntegerField()
-        time_in = models.DateTimeField()
-        time_out = models.DateTimeField(null=True, blank=True)
-        created_by = models.BigIntegerField() #sys_user
-        created_date = models.DateTimeField()
-        updated_by = models.BigIntegerField(null=True, blank=True) #sys_user
-        updated_date = models.DateTimeField(null=True, blank=True)
-        posted_by = models.BigIntegerField(null=True, blank=True) #sys_user
-        posted_date = models.DateTimeField(null=True, blank=True)
-        is_fap = models.BooleanField(default=False)
-        is_candis = models.BooleanField(default=False)
-        is_posted = models.BooleanField(default=False)
-        location_in = models.CharField(max_length=255, null=True)
-        ip_address_in = models.CharField(max_length=255,null=True)
-        location_out = models.CharField(max_length=255, null=True)
-        ip_address_out = models.CharField(max_length=255,null=True)
-        latitude_in = models.FloatField(null=True, blank=True)
-        longitude_out = models.FloatField(null=True, blank=True)
-            
-        class Meta:
-            db_table = 'scm_tr_trip_ticket_branch_logs'
-            managed = True
-        """     constraints = [
-                models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='branch_logs_composite_pk') #not working so manual it sa mssql
-            ]
- """
-    
+
+class TripTicketBranchLogsModel(models.Model):
+    server_id = models.BigIntegerField(default=1)
+    branch_id = models.BigIntegerField()
+    trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
+    log_id = models.BigAutoField(primary_key=True) #identity
+    time_in = models.DateTimeField()
+    time_out = models.DateTimeField(null=True, blank=True)
+    created_by = models.BigIntegerField() #sys_user
+    created_date = models.DateTimeField()
+    updated_by = models.BigIntegerField(null=True, blank=True) #sys_user
+    updated_date = models.DateTimeField(null=True, blank=True)
+    posted_by = models.BigIntegerField(null=True, blank=True) #sys_user
+    posted_date = models.DateTimeField(null=True, blank=True)
+    is_fap = models.BooleanField(default=False)
+    is_candis = models.BooleanField(default=False)
+    is_posted = models.BooleanField(default=False)
+    location_in = models.CharField(max_length=255, null=True)
+    ip_address_in = models.CharField(max_length=255,null=True)
+    location_out = models.CharField(max_length=255, null=True)
+    ip_address_out = models.CharField(max_length=255,null=True)
+    latitude_in = models.FloatField(null=True, blank=True)
+    latitude_out = models.FloatField(null=True, blank=True)  
+    longitude_in = models.FloatField(null=True, blank=True)
+    longitude_out = models.FloatField(null=True, blank=True)  
+    class Meta:
+        db_table = 'scm_tr_trip_ticket_branch_logs'
+        managed = True
+    """     constraints = [
+            models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='branch_logs_composite_pk') #not working so manual it sa mssql
+        ]
+"""

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Button, Alert, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { format } from 'date-fns';
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface TripDetails {
     trip_ticket_id: number;
@@ -75,16 +76,90 @@ export default function TripListDetails() {
         }
     };
     const timeIn = async () => {
-        console.log("titest ", new Date())
-        console.log("timetript ", TripDetails)
         try {
+            const userData = await AsyncStorage.getItem('user_data');
+            const userId = userData ? JSON.parse(userData).user_id : null;
             const response = await api.get("/retrieve-location/");
-            console.log("locloc", response.data);
-        } catch (error) {   
-            console.error("Error fetching location:", error);
-        }
-    }
+            const locationData = response.data;
+            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
+            console.log("titest2 ", currentDate);
+            console.log("titesmet2 ", currentTime);
+            console.log("tripticketinin", trip_ticket_id, id);
+            const userIp = locationData.ip;
+            const latitude = locationData.latitude;
+            const longitude = locationData.longitude;
+            const fulladdress = locationData.fulladdress;
+            console.log("locloc", userIp, latitude, longitude, fulladdress, currentDate);
 
+            const clockInData = {
+                ip_address_in: userIp,
+                location_in: fulladdress,
+                latitude_in: latitude,
+                longitude_in: longitude,
+                created_by: userId,
+                trip_ticket_id: trip_ticket_id,
+                branch_id: id
+            }
+            const postResponse = await api.post("/clock-in/", clockInData);
+
+            console.log("clockindata", postResponse.data)
+            Alert.alert("CLOCKEDIN", "YOUCLOCKED");
+        } catch (error: any) {
+            if (error.response && error.response.data.error === "You have already clocked in today.") {
+                Alert.alert("Error", "You have already clocked in today.");
+            } else {
+                console.error("Error fetching location or clocking in:", error.response.data);
+
+                Alert.alert("Error", JSON.stringify(error.response.data));
+            }
+        }
+    };
+    const timeOut = async () => {
+        try {
+            const accessToken = await AsyncStorage.getItem('access_token');
+            const userData = await AsyncStorage.getItem('user_data');
+            const userId = userData ? JSON.parse(userData).user_id : null;
+            const response = await api.get("/retrieve-location/");
+            const locationData = response.data;
+            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
+            console.log("titest2 ", currentDate);
+            console.log("titesmet2 ", currentTime);
+            console.log("tripticketinin", trip_ticket_id, id);
+            const userIp = locationData.ip;
+            const latitude = locationData.latitude;
+            const longitude = locationData.longitude;
+            const fulladdress = locationData.fulladdress;
+            console.log("locloc", userIp, latitude, longitude, fulladdress, currentDate);
+
+            const clockInData = {
+                ip_address_out: userIp,
+                location_out: fulladdress,
+                latitude_out: latitude,
+                longitude_out: longitude,
+                trip_ticket_id: trip_ticket_id,
+                branch_id: id
+            }
+            const postResponse = await api.post("/clock-out/", clockInData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            console.log("clockindata", postResponse.data)
+            Alert.alert("CLOCKEDIN", "YOUCLOCKED");
+        } catch (error: any) {
+            if (error.response && error.response.data.error === "You have already clocked out today.") {
+                Alert.alert("Error", "You have already clocked out today.");
+            } else {
+                console.error("Error fetching location or clocking out:", error.response.data);
+
+                Alert.alert("Error", JSON.stringify(error.response.data));
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -97,14 +172,24 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
-            <TouchableOpacity onPress={timeIn}>
-                <View style={styles.attendanceButton}>
-                    <Text>
-                        Clock in
-                        <Ionicons name={"alarm-outline"} size={24} />
-                    </Text>
-                </View>
-            </TouchableOpacity>
+            <View style={styles.clockContainer}>
+                <TouchableOpacity onPress={timeIn}>
+                    <View style={styles.attendanceButton}>
+                        <Text>
+                            Clock in
+                            <Ionicons name={"alarm-outline"} size={24} />
+                        </Text>
+                    </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={timeOut}>
+                    <View style={styles.attendanceButton2}>
+                        <Text>
+                            Clock out
+                            <Ionicons name={"alarm-outline"} size={24} />
+                        </Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
 
             <FlatList
                 data={currentItems}
@@ -151,9 +236,18 @@ export default function TripListDetails() {
 
 const styles = StyleSheet.create({
     attendanceButton: {
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderRadius: 10,
         padding: 10,
+        marginHorizontal: 5,
+        borderColor: 'green',
+    },
+    attendanceButton2: {
+        borderWidth: 1.5,
+        borderRadius: 10,
+        padding: 10,
+        marginHorizontal: 5,
+        borderColor: 'red',
     },
     container: {
         flex: 1,
@@ -161,6 +255,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         backgroundColor: 'ffd33d'
+    },
+    clockContainer: {
+        flexDirection: 'row',
     },
     title: {
         fontSize: 24,

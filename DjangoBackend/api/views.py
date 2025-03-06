@@ -16,6 +16,8 @@ from django.contrib.gis.geoip2 import GeoIP2
 import logging
 import pytesseract
 from django.http import JsonResponse
+import requests
+from datetime import date,datetime
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 logger = logging.getLogger(__name__)
@@ -152,6 +154,46 @@ class TripDetailView(APIView):
 
         return Response(response_data)
 
+class ManageAttendanceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        user_logs = TripTicketBranchLogsModel.objects.using('default').filter(created_by=user.user_id)
+        log_ids = list(user_logs.values_list('log_id', flat=True).distinct())
+        if not user_logs.exists():
+            return Response({"userlogs": []}, status=status.HTTP_200_OK)
+        if not log_ids :
+            return Response({"error": "No attendance found."}, status=404)
+
+        logger.warning(f"Unique log id: {log_ids}")
+        userlog_data = TripTicketBranchLogsModel.objects.using('default').filter(log_id__in=log_ids)
+
+        seen_logs_ids = set()
+        filtered_user_data = []
+        for userlog in userlog_data:
+            if userlog.trip_ticket_id not in seen_logs_ids:
+                seen_logs_ids.add(userlog.trip_ticket_id)
+                filtered_user_data.append(userlog)
+
+        grouped_trips = {}
+        for userlog in userlog_data:
+            if userlog.trip_ticket_id not in grouped_trips:
+                grouped_trips[userlog.trip_ticket_id] = {
+                    "trip_ticket_id": userlog.trip_ticket_id,
+                    "trip_ticket_detail_id": [],
+                }
+           
+        logger.warning(f"booorat, {list(grouped_trips.values())}")
+        trip_serializer = TripDetailsSerializer(filtered_user_data, many=True)
+        logger.warning(f"Filtered Trip details: {trip_serializer.data}")
+
+        response_data = {
+            'tripdetails': list(grouped_trips.values())
+        }
+
+        return Response(response_data)
     
 class ManageTripDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -342,7 +384,6 @@ class UploadOutslipView(APIView):
         return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-#class ClockInAttendance(APIView):
 class EditUploadedPictures(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -408,10 +449,15 @@ class RetrieveLocationView(APIView):
         
         try:
             location_data = g.city(user_ip)  # Fetch location details
+            latitude = location_data['latitude']
+            longitude = location_data['longitude']
+            
+            locationiq_response = self.reverse_geocode(latitude, longitude)
+            
         except Exception as e:
             return Response({"error": str(e)}, status=400)
         
-        return Response({"ip": user_ip, "location": location_data})
+        return Response({"ip": user_ip, "longitude": longitude, "latitude": latitude, "fulladdress": locationiq_response.get('display_name')})
 
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -420,3 +466,86 @@ class RetrieveLocationView(APIView):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+    
+    def reverse_geocode(self, lat, lon):
+        url = "https://us1.locationiq.com/v1/reverse"
+        params = {
+            'key' : 'pk.290fe86c4236d073d5c6996361d7d23d',
+            'lat': lat,
+            'lon': lon,
+            'format': 'json'
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    
+class ClockInAttendance(APIView):
+    permission_classes = [AllowAny]
+    def post (self, request):
+        data = request.data
+        user_id = data['created_by']
+        current_date = datetime.now().date()
+        try:
+            has_clocked_in = TripTicketBranchLogsModel.objects.filter(
+                created_by=user_id,
+                created_date__date=current_date
+            ).first()
+            
+            if has_clocked_in:
+                return Response(
+                    {"error": f"You have already clocked in today at {has_clocked_in.time_in}."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            TripTicketBranchLogsModel.objects.create(
+                server_id=1,
+                trip_ticket_id=data['trip_ticket_id'],
+                branch_id=data['branch_id'],
+                time_in=timezone.now(),
+                created_by=data['created_by'],
+                created_date=timezone.now(),
+                updated_date=timezone.now(),
+                updated_by=data['created_by'],
+                location_in=data['location_in'],
+                ip_address_in=data['ip_address_in'],
+                latitude_in=data['latitude_in'],
+                longitude_in=data['longitude_in'],
+            )
+            return Response ({"message": "insucc"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class ClockOutAttendance(APIView):
+    permission_classes = [IsAuthenticated]
+    def post (self, request):
+        data = request.data
+        user_id = request.user.user_id
+        current_date = datetime.now().date()
+        try:
+            has_clocked_in = TripTicketBranchLogsModel.objects.filter(
+                created_by=user_id,
+                created_date__date=current_date
+            ).first()
+            has_clocked_out = TripTicketBranchLogsModel.objects.filter(
+                created_by=user_id,
+                time_out__date=current_date
+            ).first()
+            if has_clocked_out:
+                return Response(
+                    {"error": f"You have already clocked out today at {has_clocked_out.time_out}."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            has_clocked_in.time_out = timezone.now()
+            has_clocked_in.updated_by = user_id
+            has_clocked_in.updated_date = timezone.now()
+            has_clocked_in.location_out = data['location_out']
+            has_clocked_in.ip_address_out = data['ip_address_out']
+            has_clocked_in.latitude_out = data ['latitude_out']
+            has_clocked_in.longitude_out = data['longitude_out']
+            has_clocked_in.save()
+            return Response ({"message": "insucc"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+   
