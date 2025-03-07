@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { LogBox } from 'react-native';
 import { Float } from 'react-native/Libraries/Types/CodegenTypes';
+import { VELOCITY_EPS } from 'react-native-reanimated/lib/typescript/animation/decay/utils';
 
 interface Attendance {
     log_id: number;
@@ -22,7 +23,7 @@ interface Attendance {
     latitude_out: Float;
     longitude_in: Float;
     longitude_out: Float;
-
+    branch_details: any;
 }
 
 export default function ManageAttendance() {
@@ -44,17 +45,17 @@ export default function ManageAttendance() {
                     Alert.alert('Error', 'No access token found. Please log in.');
                     return;
                 }
-                const response = await api.get('/manage_upload/',
+                const response = await api.get('/manage-attendance/',
                     {
                         headers: {
                             Authorization: `Bearer ${accessToken}`,
                         },
                     }
                 );
-                if (response.status === 200 && response.data.tripdetails.length > 0) {
-                    setAttendanceData(response.data.tripdetails);
-                    console.log("tite", response);
-                    console.log("tripde", JSON.stringify(response.data.tripdetails, null, 2));
+                if (response.status === 200 && response.data.userlogs.length > 0) {
+                    setAttendanceData(response.data.userlogs);
+                    console.log("tite", response.data.userlogs);
+                    console.log("atat", JSON.stringify(response.data.userlogs, null, 2));
                 }
                 else {
                     setAttendanceData([]);
@@ -80,9 +81,9 @@ export default function ManageAttendance() {
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
- 
 
- 
+
+
 
     if (loading) {
         return (
@@ -95,9 +96,37 @@ export default function ManageAttendance() {
 
     return (
         <View style={styles.container}>
-            
+            <Text style={styles.title}> Attendance List </Text>
+            <FlatList
+                data={attendanceData}
+                keyExtractor={item => item.log_id.toString()}
+                renderItem={({ item }) => (
+                    <View style={styles.ticketContainer}>
+                        <View style={styles.ticketHeader}>
+                            <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
+                            <Text style={styles.footerText}> Trip ID: {item.trip_ticket_id} </Text>
+                            <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
+                        </View>
+                        <View style={styles.ticketBody}>
+                            <View style={styles.infoSection}>
+                                <Text style={styles.label}> Time in: </Text>
+                                <Text style={styles.value}> {format(new Date(item.time_in), 'MMM dd, yyyy hh:mm a')}</Text>
+                            </View>
+                            <View style={styles.infoSection}>
+                                <Text style={styles.label}> Time out: </Text>
+                                <Text style={styles.value}> {format(new Date(item.time_out), 'MMM dd, yyyy hh:mm a')}</Text>
+                            </View>
 
-        </View>
+                        </View>
+                        <View style={styles.ticketFooter}>
+                            <Text style={styles.footerText}> Location Logged : {item.location_in} </Text>
+                        </View>
+                        
+                    </View>
+                )}
+            >
+            </FlatList>
+        </View >
     );
 }
 

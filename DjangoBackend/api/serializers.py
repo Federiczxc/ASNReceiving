@@ -70,4 +70,9 @@ class OutslipImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = OutslipImagesModel
         fields = '__all__'
-    
+
+class BranchLogsSerializer(serializers.ModelSerializer):
+    branch_details = TripBranchSerializer(source='branch', read_only=True)
+    class Meta:
+        model = TripTicketBranchLogsModel
+        fields = '__all__'

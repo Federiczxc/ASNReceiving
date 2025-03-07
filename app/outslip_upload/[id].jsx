@@ -13,7 +13,8 @@ import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
-        branch_name: ''
+        branch_name: '',
+        branch_id: '',
     });
     const [outslipDetail, setOutslipDetail] = useState({
         trip_ticket_id: null,
@@ -178,6 +179,7 @@ export default function OutslipUpload() {
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             formData.append('created_date', createdDate);
             formData.append('created_by', userId);
+            formData.append('branch_id', tripBranch.branch_id)
             if (Array.isArray(ocrResults)) {
                 ocrResults.forEach((ocrResult) => {
                     formData.append('upload_text', ocrResult);

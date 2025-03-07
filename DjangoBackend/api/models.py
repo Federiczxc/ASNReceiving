@@ -81,6 +81,7 @@ class OutslipImagesModel(models.Model):
     trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
     upload_id = models.BigAutoField(primary_key=True) #identity
     trip_ticket_detail_id = models.BigIntegerField()
+    branch_id = models.BigIntegerField()
     upload_text = models.CharField(max_length=4000, null=True, blank=True)
     upload_remarks = models.CharField(max_length=4000, null=True, blank=True)
     upload_files = models.CharField(max_length=4000, null=True, blank=True)
@@ -103,7 +104,6 @@ class OutslipImagesModel(models.Model):
 
 class TripTicketBranchLogsModel(models.Model):
     server_id = models.BigIntegerField(default=1)
-    branch_id = models.BigIntegerField()
     trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
     log_id = models.BigAutoField(primary_key=True) #identity
     time_in = models.DateTimeField()
@@ -125,6 +125,8 @@ class TripTicketBranchLogsModel(models.Model):
     latitude_out = models.FloatField(null=True, blank=True)  
     longitude_in = models.FloatField(null=True, blank=True)
     longitude_out = models.FloatField(null=True, blank=True)  
+    branch = models.ForeignKey(TripBranchModel, on_delete=models.CASCADE, related_name='logs')
+
     class Meta:
         db_table = 'scm_tr_trip_ticket_branch_logs'
         managed = True

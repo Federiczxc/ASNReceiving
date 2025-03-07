@@ -20,7 +20,8 @@ urlpatterns = [
     path('edit-upload-pics/', EditUploadedPictures.as_view(), name='editpics'),
     path('retrieve-location/', RetrieveLocationView.as_view(), name='retrievelocation'),
     path('clock-in/', ClockInAttendance.as_view(), name='clockinattendance'),
-    path('clock-out/', ClockOutAttendance.as_view(), name='clockoutattendance')
+    path('clock-out/', ClockOutAttendance.as_view(), name='clockoutattendance'),
+    path('manage-attendance/', ManageAttendanceView.as_view(), name='attendanceview')
 ]   
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

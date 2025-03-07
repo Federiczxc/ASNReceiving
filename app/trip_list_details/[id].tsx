@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Button, Alert, LogBox, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
@@ -25,6 +25,8 @@ interface BranchDetails {
 }
 
 export default function TripListDetails() {
+
+    LogBox.ignoreAllLogs()
     const [TripDetails, setTripDetails] = useState<TripDetails[]>([]);
     const [BranchDetails, setBranchDetails] = useState<BranchDetails | null>(null);
     const [loading, setLoading] = useState<boolean>(true);

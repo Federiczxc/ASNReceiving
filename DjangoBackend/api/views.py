@@ -161,36 +161,12 @@ class ManageAttendanceView(APIView):
         user = request.user
         
         user_logs = TripTicketBranchLogsModel.objects.using('default').filter(created_by=user.user_id)
-        log_ids = list(user_logs.values_list('log_id', flat=True).distinct())
-        if not user_logs.exists():
-            return Response({"userlogs": []}, status=status.HTTP_200_OK)
-        if not log_ids :
-            return Response({"error": "No attendance found."}, status=404)
+      
 
-        logger.warning(f"Unique log id: {log_ids}")
-        userlog_data = TripTicketBranchLogsModel.objects.using('default').filter(log_id__in=log_ids)
-
-        seen_logs_ids = set()
-        filtered_user_data = []
-        for userlog in userlog_data:
-            if userlog.trip_ticket_id not in seen_logs_ids:
-                seen_logs_ids.add(userlog.trip_ticket_id)
-                filtered_user_data.append(userlog)
-
-        grouped_trips = {}
-        for userlog in userlog_data:
-            if userlog.trip_ticket_id not in grouped_trips:
-                grouped_trips[userlog.trip_ticket_id] = {
-                    "trip_ticket_id": userlog.trip_ticket_id,
-                    "trip_ticket_detail_id": [],
-                }
-           
-        logger.warning(f"booorat, {list(grouped_trips.values())}")
-        trip_serializer = TripDetailsSerializer(filtered_user_data, many=True)
-        logger.warning(f"Filtered Trip details: {trip_serializer.data}")
+        userlogs_serializer = BranchLogsSerializer(user_logs, many=True)
 
         response_data = {
-            'tripdetails': list(grouped_trips.values())
+            'userlogs': userlogs_serializer.data,
         }
 
         return Response(response_data)
@@ -334,6 +310,7 @@ class UploadOutslipView(APIView):
         trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
         user_id = request.data.get('created_by')
         date_now = request.data.get('created_date')
+        branch_id = request.data.get('branch_id')
         logger.warning(f"Upload Images: {upload_images}")
         logger.warning(f"Upload Remarks: {upload_remarks}")
         logger.warning(f"Trip Ticket ID: {trip_ticket_id}")
@@ -367,6 +344,7 @@ class UploadOutslipView(APIView):
                         created_date=date_now,
                         updated_by=user_id,
                         updated_date=date_now,
+                        branch_id=branch_id
                     )
                     uploaded_files.append(OutslipImagesSerializer(outslip_image).data)
                     
@@ -485,12 +463,16 @@ class ClockInAttendance(APIView):
     def post (self, request):
         data = request.data
         user_id = data['created_by']
+        trip_ticket_id=data.get('trip_ticket_id')
+        branch_id=data.get('branch_id')
         current_date = datetime.now().date()
         try:
             has_clocked_in = TripTicketBranchLogsModel.objects.filter(
-                created_by=user_id,
-                created_date__date=current_date
-            ).first()
+                    created_by=user_id,
+                    created_date__date=current_date,
+                    trip_ticket_id=trip_ticket_id,
+                    branch_id=branch_id
+                ).first()
             
             if has_clocked_in:
                 return Response(
@@ -519,22 +501,39 @@ class ClockOutAttendance(APIView):
     def post (self, request):
         data = request.data
         user_id = request.user.user_id
+        trip_ticket_id=data.get('trip_ticket_id')
+        branch_id=data.get('branch_id')
         current_date = datetime.now().date()
         try:
             has_clocked_in = TripTicketBranchLogsModel.objects.filter(
                 created_by=user_id,
-                created_date__date=current_date
+                created_date__date=current_date,
+                trip_ticket_id=trip_ticket_id,
+                branch_id=branch_id
             ).first()
-            has_clocked_out = TripTicketBranchLogsModel.objects.filter(
-                created_by=user_id,
-                time_out__date=current_date
-            ).first()
-            if has_clocked_out:
-                return Response(
-                    {"error": f"You have already clocked out today at {has_clocked_out.time_out}."},
+            
+            if not has_clocked_in:
+                return Response (
+                    {"error": "You must clock in before clocking out."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-                
+            if has_clocked_in.time_out:
+                return Response(
+                    {"error": f"You have already clocked out today at {has_clocked_in.time_out}."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            trip_details = TripDetailsModel.objects.filter(trip_ticket_id=trip_ticket_id)
+            
+            for detail in trip_details:
+                if not OutslipImagesModel.objects.filter(
+                    trip_ticket_id= trip_ticket_id,
+                    trip_ticket_detail_id=detail.trip_ticket_detail_id,
+                    branch_id=detail.branch_id,
+                ).exists():
+                    return Response(
+                        {"error": f"Upload missing for outslip number: {detail.trip_ticket_detail_id}."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             has_clocked_in.time_out = timezone.now()
             has_clocked_in.updated_by = user_id
             has_clocked_in.updated_date = timezone.now()

@@ -8,9 +8,9 @@ import api from '../api';
 export default function LoginPage() {
 
   const [values, setValues] = useState({
-        username: '',
-        password: '',
-    })
+    username: '',
+    password: '',
+  })
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const handleLogin = async () => {
@@ -83,13 +83,13 @@ export default function LoginPage() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>ASN Test</Text>
+      <Text style={styles.text}>Delivery Monitoring System</Text>
       <TextInput
         style={styles.input}
         placeholder="Username"
         placeholderTextColor="#aaa"
         value={values.username}
-        onChangeText={(text) => setValues({...values, username:text})}
+        onChangeText={(text) => setValues({ ...values, username: text })}
 
 
       />
@@ -99,14 +99,16 @@ export default function LoginPage() {
         placeholderTextColor="#aaa"
         secureTextEntry
         value={values.password}
-        onChangeText={(text) => setValues({...values, password:text})}
+        onChangeText={(text) => setValues({ ...values, password: text })}
       />
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>
           {isLoading ? 'Logging in...' : 'Log in'}
         </Text>
       </TouchableOpacity>
-      <Link href="/register" style={styles.link}>Register</Link>
+      {/* <Link href="/register" style={styles.link}>Register</Link> */}
+
+
     </View>
   );
 }

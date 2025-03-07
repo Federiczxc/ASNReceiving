@@ -41,19 +41,25 @@ export default function RootLayout() {
           <Stack.Screen
             name="outslip_upload/[id]"
             options={{
-              title: 'Outslip Upload', // Set the title here
+              title: 'ASN Upload', // Set the title here
             }}
           />
           <Stack.Screen
             name="manage_upload/manage_upload"
             options={{
-              title: 'Manage Uploads', // Set the title here
+              title: 'Manage ASN', // Set the title here
             }}
           />
           <Stack.Screen
             name="manage_upload/[id]"
             options={{
-              title: 'Edit Outslip Upload', // Set the title here
+              title: 'Edit ASN Upload', // Set the title here
+            }}
+          />
+          <Stack.Screen
+            name="manage_attendance/manage_attendance"
+            options={{
+              title: 'Manage Attendance', // Set the title here
             }}
           />
         </Stack>
