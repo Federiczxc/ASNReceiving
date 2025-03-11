@@ -18,6 +18,7 @@ import pytesseract
 from django.http import JsonResponse
 import requests
 from datetime import date,datetime
+from django.forms.models import model_to_dict
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 logger = logging.getLogger(__name__)
@@ -315,6 +316,16 @@ class UploadOutslipView(APIView):
         logger.warning(f"Upload Remarks: {upload_remarks}")
         logger.warning(f"Trip Ticket ID: {trip_ticket_id}")
         logger.warning(f"Trip Ticket Detail ID: {trip_ticket_detail_id}")
+        no_clock_in = TripTicketBranchLogsModel.objects.filter(
+            created_by=user_id,
+            time_in__isnull=True,
+            branch_id=branch_id,
+        ).first()
+        if no_clock_in:
+            return Response(
+                {"error": f"You haven't clocked in for this branch"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         if not upload_images:
             return Response({'error': 'Image is required'}, status=status.HTTP_402_BAD_REQUEST)
         uploaded_files = []
@@ -467,18 +478,28 @@ class ClockInAttendance(APIView):
         branch_id=data.get('branch_id')
         current_date = datetime.now().date()
         try:
-            has_clocked_in = TripTicketBranchLogsModel.objects.filter(
-                    created_by=user_id,
-                    created_date__date=current_date,
-                    trip_ticket_id=trip_ticket_id,
-                    branch_id=branch_id
-                ).first()
-            
-            if has_clocked_in:
+            no_clock_out = TripTicketBranchLogsModel.objects.filter(
+                created_by=user_id,
+                time_out__isnull=True
+              ).exclude(branch_id=branch_id).first()
+            if no_clock_out:
                 return Response(
-                    {"error": f"You have already clocked in today at {has_clocked_in.time_in}."},
+                    {"error": f"You haven't clocked out at trip ticket ID: {no_clock_out.trip_ticket_id} branch ID:{no_clock_out.branch_id}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            else:
+                has_clocked_in = TripTicketBranchLogsModel.objects.filter(
+                        created_by=user_id,
+                        created_date__date=current_date,
+                        trip_ticket_id=trip_ticket_id,
+                        branch_id= branch_id
+                    ).first()
+                if has_clocked_in:
+                    return Response(
+                        {"error": f"You have already clocked in today at {has_clocked_in.time_in}."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+           
             TripTicketBranchLogsModel.objects.create(
                 server_id=1,
                 trip_ticket_id=data['trip_ticket_id'],
@@ -522,14 +543,14 @@ class ClockOutAttendance(APIView):
                     {"error": f"You have already clocked out today at {has_clocked_in.time_out}."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            trip_details = TripDetailsModel.objects.filter(trip_ticket_id=trip_ticket_id)
+            trip_details = TripDetailsModel.objects.filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
             
             for detail in trip_details:
                 if not OutslipImagesModel.objects.filter(
                     trip_ticket_id= trip_ticket_id,
                     trip_ticket_detail_id=detail.trip_ticket_detail_id,
                     branch_id=detail.branch_id,
-                ).exists():
+                ).first():
                     return Response(
                         {"error": f"Upload missing for outslip number: {detail.trip_ticket_detail_id}."},
                         status=status.HTTP_400_BAD_REQUEST

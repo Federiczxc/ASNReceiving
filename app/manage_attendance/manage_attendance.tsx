@@ -114,7 +114,7 @@ export default function ManageAttendance() {
                             </View>
                             <View style={styles.infoSection}>
                                 <Text style={styles.label}> Time out: </Text>
-                                <Text style={styles.value}> {format(new Date(item.time_out), 'MMM dd, yyyy hh:mm a')}</Text>
+                                <Text style={styles.value}> {item.time_out ? format(new Date(item.time_out), 'MMM dd, yyyy hh:mm a') : ''}</Text>
                             </View>
 
                         </View>
