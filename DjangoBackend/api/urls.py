@@ -19,6 +19,7 @@ urlpatterns = [
     path('manage-upload-pics/', ManageUploadedPictures.as_view(), name='managepics'),
     path('edit-upload-pics/', EditUploadedPictures.as_view(), name='editpics'),
     path('retrieve-location/', RetrieveLocationView.as_view(), name='retrievelocation'),
+    path('save-location/', SaveLocationView.as_view(), name='savelocation'),
     path('clock-in/', ClockInAttendance.as_view(), name='clockinattendance'),
     path('clock-out/', ClockOutAttendance.as_view(), name='clockoutattendance'),
     path('manage-attendance/', ManageAttendanceView.as_view(), name='attendanceview')

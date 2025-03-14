@@ -226,7 +226,7 @@ export default function OutslipUpload() {
                     errorMessage += `${detail.upload_image}: ${JSON.stringify(errors)}\n`;
                 });
 
-                Alert.alert('Upload Failed', errorMessage);
+                Alert.alert('Upload Failed', JSON.stringify(error.response.data));
             } else {
                 Alert.alert('Upload Failed', 'An unexpected error occurred.');
             }

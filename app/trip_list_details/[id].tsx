@@ -3,10 +3,12 @@ import { View, Text, Button, Alert, LogBox, TextInput, ActivityIndicator, FlatLi
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
-import { format } from 'date-fns';
+import { format, secondsToMilliseconds, set } from 'date-fns';
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PermissionsAndroid, Platform } from 'react-native';
+import * as Location from 'expo-location'
 
 interface TripDetails {
     trip_ticket_id: number;
@@ -37,7 +39,67 @@ export default function TripListDetails() {
     const params = useLocalSearchParams();
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
     const trip_ticket_id = Array.isArray(params.trip_ticket_id) ? params.trip_ticket_id[0] : params.trip_ticket_id;
+    const requestLocationPermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                    {
+                        title: 'Location Permission',
+                        message: 'This app needs to access your location.',
+                        buttonNeutral: 'Ask Me Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    },
+                );
+                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                    console.log('Location permission granted');
+                    return true;
+                } else {
+                    console.log('Location permission denied');
+                    return false;
+                }
+            } catch (err) {
+                console.warn(err);
+                return false;
+            }
+        } else {
+            return true;
+        }
+    };
+    const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Error', 'Location permission denied');
+            return null;
+        }
+    
+        try {
+            const location = await Location.getCurrentPositionAsync({});
+            const {latitude, longitude} = location.coords;
+            console.log('Latitude', latitude);
+            console.log('Longitude', longitude);
 
+            return {latitude, longitude};
+        } catch (error) {
+            console.error('Error getting location:', error);
+            Alert.alert('Error', 'Failed to get location');
+            return null;
+        }
+
+    };
+    const sendLocationToBackend = async (latitude: any, longitude: any) => {
+        try {
+            const response = await api.post('/save-location/', {
+                latitude,
+                longitude,
+            });
+            console.log('Location saved:', response.data);
+        } catch (error) {
+            console.error('Error saving location:', error);
+            Alert.alert('Error', 'Failed to save location');
+        }
+    };
     // Convert to number if needed
     const branch_id = id ? parseInt(id as string, 10) : null;
     const tripId = trip_ticket_id ? parseInt(trip_ticket_id as string, 10) : null;
@@ -79,6 +141,54 @@ export default function TripListDetails() {
     };
     const timeIn = async () => {
         try {
+            setLoading(true)
+
+            const userData = await AsyncStorage.getItem('user_data');
+            const userId = userData ? JSON.parse(userData).user_id : null;
+            // Get the user's current location
+            const location = await getCurrentLocation();
+            if (!location) {
+                Alert.alert('Error', 'Failed to get location');
+                return;
+            }
+            const { latitude, longitude } = location;
+            console.log("TUITEUTEITIE", location, latitude, longitude);
+
+            // Get additional location data (e.g., address) using LocationIQ or another service
+
+            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
+            console.log("titest2 ", currentDate);
+            console.log("titesmet2 ", currentTime);
+            console.log("tripticketinin", trip_ticket_id, id);
+
+            const clockInData = {
+                latitude_in: latitude,
+                longitude_in: longitude,
+                created_by: userId,
+                trip_ticket_id: trip_ticket_id,
+                branch_id: id,
+            };
+
+            const postResponse = await api.post("/clock-in/", clockInData);
+            console.log("clockindata", postResponse.data);
+            Alert.alert("CLOCKEDIN", "YOUCLOCKED");
+            setLoading(false)
+
+        } catch (error: any) {
+            if (error.response && error.response.data.error === "You have already clocked in today.") {
+                Alert.alert("Error", "You have already clocked in today.");
+            } else {
+                console.error("Error fetching location or clocking in:", error.response ? error.response.data : error.message);
+                Alert.alert("Error", JSON.stringify(error.response ? error.response.data : error.message));
+            }
+        }
+        finally{
+            setLoading(false)
+        }
+    };
+    /* const timeIn = async () => {
+        try {
             const userData = await AsyncStorage.getItem('user_data');
             const userId = userData ? JSON.parse(userData).user_id : null;
             const response = await api.get("/retrieve-location/");
@@ -93,7 +203,6 @@ export default function TripListDetails() {
             const longitude = locationData.longitude;
             const fulladdress = locationData.fulladdress;
             console.log("locloc", userIp, latitude, longitude, fulladdress, currentDate);
-
             const clockInData = {
                 ip_address_in: userIp,
                 location_in: fulladdress,
@@ -116,8 +225,60 @@ export default function TripListDetails() {
                 Alert.alert("Error", JSON.stringify(error.response.data));
             }
         }
-    };
+    }; */
     const timeOut = async () => {
+        try {
+            setLoading(true)
+            const accessToken = await AsyncStorage.getItem('access_token');
+            const userData = await AsyncStorage.getItem('user_data');
+            const userId = userData ? JSON.parse(userData).user_id : null;
+            const location = await getCurrentLocation();
+            if (!location) {
+                Alert.alert('Error', 'Failed to get location');
+                return;
+            }
+            const { latitude, longitude } = location;
+            console.log("TUITEUTEITIE", location, latitude, longitude);
+
+            // Get additional location data (e.g., address) using LocationIQ or another service
+         
+            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
+            console.log("titest2 ", currentDate);
+            console.log("titesmet2 ", currentTime);
+            console.log("tripticketinin", trip_ticket_id, id);
+          
+            console.log("locloc", latitude, longitude, currentDate);
+
+            const clockInData = {
+                latitude_out: latitude,
+                longitude_out: longitude,
+                trip_ticket_id: trip_ticket_id,
+                branch_id: id
+            }
+            const postResponse = await api.post("/clock-out/", clockInData, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            console.log("clockindata", postResponse.data)
+            Alert.alert("CLOCKEDOUT", "YOUCLOCKED");
+
+        } catch (error: any) {
+            if (error.response && error.response.data.error === "You have already clocked out today.") {
+                Alert.alert("Error", "You have already clocked out today.");
+            } else {
+                console.error("Error fetching location or clocking out:", error.response.data);
+
+                Alert.alert("Error", JSON.stringify(error.response.data));
+            }
+        }
+        finally{
+            setLoading(false)
+        }
+    };
+    /* const timeOut = async () => {
         try {
             const accessToken = await AsyncStorage.getItem('access_token');
             const userData = await AsyncStorage.getItem('user_data');
@@ -151,7 +312,7 @@ export default function TripListDetails() {
             });
 
             console.log("clockindata", postResponse.data)
-            Alert.alert("CLOCKEDIN", "YOUCLOCKED");
+            Alert.alert("CLOCKEDOUT", "YOUCLOCKED");
         } catch (error: any) {
             if (error.response && error.response.data.error === "You have already clocked out today.") {
                 Alert.alert("Error", "You have already clocked out today.");
@@ -161,7 +322,7 @@ export default function TripListDetails() {
                 Alert.alert("Error", JSON.stringify(error.response.data));
             }
         }
-    };
+    }; */
 
     if (loading) {
         return (

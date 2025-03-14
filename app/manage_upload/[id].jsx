@@ -208,6 +208,7 @@ export default function OutslipUpload() {
             })
             formData.append('trip_ticket_detail_id', outslipDetail.trip_ticket_detail_id.toString());
             formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
+            formData.append('branch_id', outslipDetail.trip_ticket_id.toString());
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             if (Array.isArray(ocrResults)) {
                 ocrResults.forEach((ocrResult) => {
@@ -255,7 +256,7 @@ export default function OutslipUpload() {
                     errorMessage += `${detail.upload_image}: ${JSON.stringify(errors)}\n`;
                 });
 
-                Alert.alert('Upload Failed', errorMessage);
+                Alert.alert('Upload Fsailed', JSON.stringify(error.response.data));
             } else {
                 Alert.alert('Upload Failed', 'An unexpected error occurred.');
             }
