@@ -172,7 +172,7 @@ export default function TripListDetails() {
 
             const postResponse = await api.post("/clock-in/", clockInData);
             console.log("clockindata", postResponse.data);
-            Alert.alert("CLOCKEDIN", "YOUCLOCKED");
+            Alert.alert("CLOCKEDIN", "Clocked in!");
             setLoading(false)
 
         } catch (error: any) {
@@ -263,7 +263,7 @@ export default function TripListDetails() {
             });
 
             console.log("clockindata", postResponse.data)
-            Alert.alert("CLOCKEDOUT", "YOUCLOCKED");
+            Alert.alert("CLOCKEDOUT", "Clocked out!");
 
         } catch (error: any) {
             if (error.response && error.response.data.error === "You have already clocked out today.") {

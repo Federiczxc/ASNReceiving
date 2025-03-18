@@ -36,7 +36,7 @@ class TripTicketModel(models.Model):
     trip_ticket_delivery_type_id = models.BigIntegerField()
     dispatched_by = models.BigIntegerField()
     remarks = models.TextField()
-
+    is_posted = models.BooleanField()
     class Meta:
         db_table = 'scm_tr_trip_ticket'
         managed = False

@@ -16,8 +16,8 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = '/media/'  # URL prefix for media files
-MEDIA_ROOT = BASE_DIR / 'media'
-
+#MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = '//192.168.1.200/Central Sourcecodes/DEV/Fed/ASNUpload'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-w7qolrc)hfzt-l80rvs-p*mzknxh^soeuy*e^=2@9n2(-1tj=q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "mis-federick"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "192.168.126.56", "mis-federick"]
 
 BASE_URL = "http://176.16.1.126:8000/api"
 # Application definition
@@ -48,7 +48,7 @@ AUTH_USER_MODEL = "api.User"
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'user_id',
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFREHS_TOKEN_LIFETIME': timedelta(days=1)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1)
 }
 REST_AUTH = {
     'USE_JWT': True,
@@ -83,7 +83,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://10.0.2.2:8081",
     "http://192.168.1.200:8081",
     "http://192.168.5.251:8081",# Allow your frontend origin
-    "http://192.168.70.184:8081"# Allow your frontend origin
+    "http://192.168.70.184:8081",
+    "http://192.168.126.56:8081",# Allow your frontend origin
     # Add this for development if needed
 ]
 CORS_ORIGIN_ALLOW_ALL = True
@@ -110,7 +111,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'DjangoBackend.wsgi.application'
-
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 GEOIP_PATH = os.path.join(BASE_DIR, 'outslips')
 GEOIP_DATABASE = 'GeoLite2-City.mmdb'
 # Database
@@ -126,10 +127,10 @@ DATABASES = {
  
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'bootstrap2_ret',
+        'NAME': 'test_bootstrap2_ret',
         'USER': 'sa',
-        'PASSWORD':'123',
-        'HOST':'localhost',
+        'PASSWORD':'1tsl@SAP',
+        'HOST':'192.168.1.200',
     }
 }
 
@@ -154,7 +155,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+#SFTP_STORAGE_HOST = '192.168.1.200'
+#SFTP_STORAGE_ROOT = '//192.168.1.200/Central Sourcecodes/DEV/Fed/ASNUpload'
+#SFTP_STORAGE_PARAMS = {
+#    'username': 'mis',
+#    'password': 'P@ssw0rd',
+#    'allow_agent': 'false',
+#    'look_for_keys': 'false',
+#}
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
+#DEFAULT_FILE_STORAGE = 'storages.backends.sftpstorage.SFTPStorage'
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 

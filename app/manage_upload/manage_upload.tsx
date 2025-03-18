@@ -125,15 +125,15 @@ export default function TripList() {
 
                             <View style={styles.ticketContainer}>
                                 <View style={styles.ticketHeader}>
-                                    <TouchableOpacity onPress={()=> router.push({
-                                pathname: '/trip_list_branch/[id]',
-                                params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
+                                    <TouchableOpacity onPress={() => router.push({
+                                        pathname: '/trip_list_branch/[id]',
+                                        params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
                                     })}>
-                                        
-                                    <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
-                                    <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
-                                        ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
-                                        : 'N/A'}</Text>
+
+                                        <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
+                                        <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                            ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
+                                            : 'N/A'}</Text>
                                     </TouchableOpacity>
 
                                 </View>

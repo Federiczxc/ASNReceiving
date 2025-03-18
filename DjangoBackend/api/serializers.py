@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import check_password
-
+from django.db import connection
 from.models import *
 class OCRSerializer(serializers.Serializer):
     image = serializers.ImageField()
@@ -35,7 +35,12 @@ class LoginSerializer(serializers.Serializer):
             user = User.objects.get(user_code=username)
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentiaals.")
-        if not check_password(password, user.password):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT dbo.fn_decrypt_pb(%s) AS decrypted_password", [user.password])
+            row = cursor.fetchone()
+            decrypted_password = row[0]   
+       # if not check_password(password, user.password):
+        if password != decrypted_password:
             raise serializers.ValidationError("Invalid creqedentials.")  # Incorrect password
         data['user'] = user
         return data

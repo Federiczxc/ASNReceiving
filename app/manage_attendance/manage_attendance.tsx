@@ -84,7 +84,6 @@ export default function ManageAttendance() {
 
 
 
-
     if (loading) {
         return (
             <View style={styles.container}>
@@ -96,36 +95,49 @@ export default function ManageAttendance() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}> Attendance List </Text>
-            <FlatList
-                data={attendanceData}
-                keyExtractor={item => item.log_id.toString()}
-                renderItem={({ item }) => (
-                    <View style={styles.ticketContainer}>
-                        <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
-                            <Text style={styles.footerText}> Trip ID: {item.trip_ticket_id} </Text>
-                            <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
-                        </View>
-                        <View style={styles.ticketBody}>
-                            <View style={styles.infoSection}>
-                                <Text style={styles.label}> Time in: </Text>
-                                <Text style={styles.value}> {format(new Date(item.time_in), 'MMM dd, yyyy hh:mm a')}</Text>
-                            </View>
-                            <View style={styles.infoSection}>
-                                <Text style={styles.label}> Time out: </Text>
-                                <Text style={styles.value}> {item.time_out ? format(new Date(item.time_out), 'MMM dd, yyyy hh:mm a') : ''}</Text>
-                            </View>
 
-                        </View>
-                        <View style={styles.ticketFooter}>
-                            <Text style={styles.footerText}> Location Logged : {item.location_in} </Text>
-                        </View>
-                        
-                    </View>
-                )}
-            >
-            </FlatList>
+            {loading ? (
+                <View style={styles.container}>
+                    <Text>Loading...</Text>
+                    <ActivityIndicator size="large" color="#0000ff" />
+                </View>
+            ) : attendanceData.length === 0 ? (
+                <Text style={styles.errorText}> No attendance data. </Text>
+            ) : (
+                <>
+                    <Text style={styles.title}> Attendance List </Text>
+                    <FlatList
+                        data={attendanceData}
+                        keyExtractor={item => item.log_id.toString()}
+                        renderItem={({ item }) => (
+                            <View style={styles.ticketContainer}>
+                                <View style={styles.ticketHeader}>
+                                    <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
+                                    <Text style={styles.footerText}> Trip ID: {item.trip_ticket_id} </Text>
+                                    <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
+                                </View>
+                                <View style={styles.ticketBody}>
+                                    <View style={styles.infoSection}>
+                                        <Text style={styles.label}> Time in: </Text>
+                                        <Text style={styles.value}> {format(new Date(item.time_in), 'MMM dd, yyyy hh:mm a')}</Text>
+                                    </View>
+                                    <View style={styles.infoSection}>
+                                        <Text style={styles.label}> Time out: </Text>
+                                        <Text style={styles.value}> {item.time_out ? format(new Date(item.time_out), 'MMM dd, yyyy hh:mm a') : ''}</Text>
+                                    </View>
+
+                                </View>
+                                <View style={styles.ticketFooter}>
+                                    <Text style={styles.footerText}> Location Logged : {item.location_in} </Text>
+                                </View>
+
+                            </View>
+                        )}
+                    >
+                    </FlatList>
+                </>
+            )}
+
         </View >
     );
 }

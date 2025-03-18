@@ -79,7 +79,7 @@ class TripListView(APIView):
 
     def get(self, request):
                 
-        trips = TripTicketModel.objects.using('default').all()
+        trips = TripTicketModel.objects.using('default').filter(is_posted=0)
         drivers = TripDriverModel.objects.using('default').all()
         driver_mapping = {driver.entity_id: driver.entity_name for driver in drivers}
         
@@ -359,7 +359,9 @@ class UploadOutslipView(APIView):
                     file_path = f'outslips/{upload_image.name}'
                     saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
                     base_url = settings.BASE_URL
-                    file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
+                   # file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
+                    file_url = f"http:{settings.MEDIA_ROOT}/{saved_path}"
+                    
                     outslip_image = serializer.save(
                         upload_files=file_url,
                         trip_ticket_id = trip_ticket_id,

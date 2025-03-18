@@ -1,16 +1,17 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import api from '../../api';
-
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import Carousel from 'react-native-reanimated-carousel';
 import { LogBox } from 'react-native';
 import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
         branch_name: '',
@@ -30,6 +31,7 @@ export default function OutslipUpload() {
     const [ocrText, setOcrText] = useState('');
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded2, setIsExpanded2] = useState(true);
     const trip_ticket_detail_id = id;
     const [images, setImages] = useState([null]);
     const [ocrResults, setOcrResults] = useState([]);
@@ -37,6 +39,12 @@ export default function OutslipUpload() {
     const [editableOcrText, setEditableOcrText] = useState(ocrText);
     const [opened, setOpened] = useState(false);
     const [remarks, setRemarks] = useState([]);
+    const [cameraRef, setCameraRef] = useState(null);
+    const [permission, requestPermission] = useCameraPermissions();
+    const [isCameraMode, setIsCameraMode] = useState(false);
+    const [isCameraFullscreen, setIsCameraFullscreen] = useState(false);
+    const [capturedImage, setCapturedImage] = useState(null);
+    const [cameraPreview, setCameraPreview] = useState(false);
     useEffect(() => {
         setIsLoading(true);
         const fetchData = async () => {
@@ -48,6 +56,7 @@ export default function OutslipUpload() {
                 setTripBranch(response.data.branches[0]);
                 console.log("out", response.data);
                 setIsLoading(false);
+                console.log("OCLE", ocrResults.length)
             } catch (error) {
                 console.error(error);
             }
@@ -67,6 +76,34 @@ export default function OutslipUpload() {
             setImages(newImages);
         }
     };
+
+    const takePicture = async (index) => {
+        if (cameraRef) {
+            const photo = await cameraRef.takePictureAsync({ quality: 1 })
+            setCapturedImage(photo.uri)
+            setIsCameraFullscreen(false);
+            /* let newImages = [...images];
+            newImages[index] = photo.uri;
+            setImages(newImages);
+            setIsCameraMode(false); */
+            setCameraPreview(true)
+        }
+    }
+    const saveCapturedPicture = async (index) => {
+        console.log("cacap", index);
+        console.log("photo.rar", capturedImage);
+        let newImages = [...images];
+        newImages[index] = capturedImage;
+        setImages(newImages);
+        setIsCameraFullscreen(false);
+        console.log("setImags", newImages);
+        setCameraPreview(false)
+    }
+    const retakePicture = () => {
+        setCapturedImage(null);
+        setCameraPreview(false)
+        setIsCameraFullscreen(true);
+    }
     const addNewSlide = () => {
         setImages([...images, null]); // Add a new empty slide
         setOcrResults([...ocrResults, '']);
@@ -125,7 +162,9 @@ export default function OutslipUpload() {
         setIsLoading(true);
 
         if (!images[index]) {
-            Alert.alert('No image selected', 'Please select an image first.');
+            Alert.alert('No image available', 'Please upload an image first.');
+            setIsLoading(false);
+
             return;
         }
         try {
@@ -148,7 +187,7 @@ export default function OutslipUpload() {
             console.error('Error during OCR processing:', error);
             Alert.alert('Error', 'Failed to process the image. Please try again.');
         }
-        finally{
+        finally {
             setIsLoading(false);
         }
     };
@@ -207,7 +246,7 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-            router.push('/manage_upload/manage_upload')
+            /* router.push('/trip_list') */
             console.log('succ', response.data);
         }
         catch (error) {
@@ -239,127 +278,231 @@ export default function OutslipUpload() {
 
     return (
 
-        <ScrollView style={styles.container} >
-            {isLoading && (
-                <BlurView intensity={400} style={styles.overlayLoading} >
-                    <ActivityIndicator size="large" color="#4CAF50" />
-                </BlurView>
+        <View style={styles.container} >
+            {isCameraFullscreen && (
+                <View style={styles.fullscreenCameraContainer}>
+                    <CameraView
+                        style={styles.fullscreenCamera}
+                        ref={(ref) => setCameraRef(ref)} />
+                    <TouchableOpacity
+                        style={styles.captureButton}
+                        onPress={takePicture}
+                    >
+                        <Ionicons name='camera-outline' size={42} />
+                        {/* <Text style={styles.captureButtonText}>Capture</Text> */}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={() => setIsCameraFullscreen(false)}>
+                        <Ionicons name='close-outline' size={32} />
+                        {/*<Text style={styles.closeButtonText}>Close</Text> */}
+                    </TouchableOpacity>
+                </View>
             )}
-            <View style={styles.container1}>
-                <View style={styles.ticketContainer}>
-                    <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
-                        <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.trip_ticket_detail_id}</Text>
-                            <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
-                        </View>
-                        {isExpanded && (
+            {cameraPreview && !isCameraFullscreen && (
+                <View
+                    style={styles.fullscreenPreviewContainer}
+                >
+                    <Image source={{ uri: capturedImage }} style={styles.fullscreenPreviewImage} />
+                    <TouchableOpacity
+                        onPress={retakePicture}
+                        style={styles.retakeButton}
+
+                    >
+                        <Ionicons color='hsl(0,0%,90%)' name={"arrow-undo-outline"} size={32} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => saveCapturedPicture(currentIndex)}
+                        style={styles.checkButton}
+                    >
+                        <Ionicons color='hsl(0,0%,90%)' name={"checkmark-outline"} size={32} />
+                    </TouchableOpacity>
+                </View>
+
+            )}
+            <ScrollView>
+
+                {isLoading && (
+                    <BlurView intensity={400} style={styles.overlayLoading} >
+                        <ActivityIndicator size="large" color="#4CAF50" />
+                    </BlurView>
+                )}
+                <View style={styles.container1}>
+                    <View style={styles.ticketContainer}>
+                        <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
+                            <View style={styles.ticketHeader}>
+                                <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.trip_ticket_detail_id}</Text>
+                                <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
+                            </View>
+                            {isExpanded && (
+                                <>
+                                    <View style={styles.ticketBody}>
+                                        <View style={styles.infoSection}>
+                                            <Text style={styles.label}>Branch Charges:</Text>
+                                            <Text style={styles.value}>{outslipDetail.branch_charges}</Text>
+                                        </View>
+                                        <View style={styles.infoSection}>
+                                            <Text style={styles.label}>Document Amount:</Text>
+                                            <Text style={styles.value}>{outslipDetail.document_amount}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.ticketFooter}>
+                                        <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
+                                    </View>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/*     <View style={styles.container2}>
+                    <View style={styles.imageContainer}>
+                        <TouchableOpacity
+                            style={styles.toggleButton}
+                            onPress={() => setIsCameraMode(!isCameraMode)}>
+                            <Text style={styles.toggleButtonText}>
+                                {isCameraMode ? 'Switch to Gallery' : 'Switch to Camera'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.toggleButton}
+                            onPress={() => setIsCameraFullscreen(true)}>
+                            <Text style={styles.toggleButtonText}>
+                                Open Camera
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View> */}
+                <View style={styles.container2}>
+                    <View style={styles.imageContainer}>
+
+                        <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
+                            <View style={styles.ticketHeader}>
+                                <Text style={styles.tripId}>Upload Signed ASN</Text>
+                            </View>
+
+                        </TouchableOpacity>
+                        {isExpanded2 && (
                             <>
-                                <View style={styles.ticketBody}>
-                                    <View style={styles.infoSection}>
-                                        <Text style={styles.label}>Branch Charges:</Text>
-                                        <Text style={styles.value}>{outslipDetail.branch_charges}</Text>
-                                    </View>
-                                    <View style={styles.infoSection}>
-                                        <Text style={styles.label}>Document Amount:</Text>
-                                        <Text style={styles.value}>{outslipDetail.document_amount}</Text>
-                                    </View>
+                                <Carousel
+                                    key={images.length}
+                                    loop={false}
+                                    width={Dimensions.get('window').width * 1}
+                                    height={410}
+                                    data={images}
+                                    scrollAnimationDuration={200}
+                                    onProgressChange={(_, absoluteProgress) => {
+                                        const newIndex = Math.round(absoluteProgress);
+                                        setCurrentIndex(newIndex);
+                                        setEditableOcrText(ocrResults[newIndex] || '');
+                                    }}
+                                    renderItem={({ index }) => (
+                                        <>
+
+                                            {/* Image Preview & OCR Result Card */}
+                                            <View style={styles.ocrCard}>
+                                                {ocrResults.length > 0 && (
+                                                    <>
+                                                        <Text style={styles.ocrTitle}>OCR Result:</Text>
+                                                        <TextInput
+                                                            style={styles.textOutput}
+                                                            value={editableOcrText || ''}  // Use editable state
+                                                            onChangeText={(text) => {
+                                                                const newOcrResults = [...ocrResults];
+                                                                newOcrResults[index] = text;  // Update OCR text for the current image
+                                                                setOcrResults(newOcrResults);
+                                                                setEditableOcrText(text);  // Keep the editable text updated
+                                                            }}
+                                                            multiline
+                                                        />
+                                                    </>
+                                                )}
+
+                                                <Text style={styles.ocrTitle}>Remarks:</Text>
+                                                <TextInput
+                                                    style={styles.textOutput}
+                                                    value={remarks[currentIndex] || ''}
+                                                    onChangeText={(text) => {
+                                                        let newRemarks = [...remarks];
+                                                        newRemarks[currentIndex] = text;
+                                                        setRemarks(newRemarks)
+                                                    }}
+                                                    multiline
+                                                />
+                                            </View>
+                                            <View style={styles.imageCard}>
+                                                <TouchableOpacity onPress={() => setIsCameraFullscreen(true)} activeOpacity={0.7} style={styles.imageCard}>
+                                                    {images[index] ? (
+                                                        <>
+                                                            <Image source={{ uri: images[index] }} style={styles.image} />
+                                                        </>
+                                                    ) : (
+                                                        <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </View>
+
+                                            {/* 
+                                            {isCameraMode ? (
+                                                <View style={styles.cameraContainer}>
+                                                    {images[index] ? (
+                                                        <Image source={{ uri: images[index] }} style={styles.image} />
+
+                                                    ) :
+                                                        (
+                                                            <CameraView
+                                                                style={styles.camera}
+                                                                ref={(ref) => setCameraRef(ref)}
+                                                            />
+                                                        )}
+
+                                                </View>
+                                            ) : (<View style={styles.imageCard}>
+                                                <TouchableOpacity onPress={() => pickImage(index)} activeOpacity={0.7} style={styles.imageCard}>
+                                                    {images[index] ? (
+                                                        <>
+                                                            <Image source={{ uri: images[index] }} style={styles.image} />
+                                                        </>
+                                                    ) : (
+                                                        <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </View>)} */}
+                                        </>
+                                    )} />
+                                <View style={styles.paginationContainer}>
+                                    {images.map((_, i) => (
+                                        <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
+                                    ))}
                                 </View>
-                                <View style={styles.ticketFooter}>
-                                    <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
+
+                                <View style={styles.buttonContainer}>
+                                    <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
+                                        <Text style={styles.buttonText}>Extract Text</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                                        <Text style={styles.buttonText} >Submit</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity style={styles.button} onPress={addNewSlide}>
+                                        <Text style={styles.buttonText}>Add Slide</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
+                                        <Text style={styles.buttonText}>Remove Slide</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </>
                         )}
-                    </TouchableOpacity>
+
+                    </View>
                 </View>
-            </View>
 
+                {/* Buttons Section */}
 
-            <View style={styles.container2}>
+            </ScrollView>
 
-                <Carousel
-                    key={images.length}
-                    loop={false}
-                    width={Dimensions.get('window').width * 1}
-                    height={500}
-                    data={images}
-                    scrollAnimationDuration={200}
-                    onProgressChange={(_, absoluteProgress) => {
-                        const newIndex = Math.round(absoluteProgress);
-                        setCurrentIndex(newIndex);
-                        setEditableOcrText(ocrResults[newIndex] || '');
-                    }}
-                    renderItem={({ index }) => (
-                        <>
-
-                            {/* Image Preview & OCR Result Card */}
-                            <View style={styles.ocrCard}>
-
-                                <Text style={styles.ocrTitle}>OCR Result:</Text>
-                                <TextInput
-                                    style={styles.textOutput}
-                                    value={editableOcrText || ''}  // Use editable state
-                                    onChangeText={(text) => {
-                                        const newOcrResults = [...ocrResults];
-                                        newOcrResults[index] = text;  // Update OCR text for the current image
-                                        setOcrResults(newOcrResults);
-                                        setEditableOcrText(text);  // Keep the editable text updated
-                                    }}
-                                    multiline
-                                />
-                                <Text style={styles.ocrTitle}>Remarks:</Text>
-                                <TextInput
-                                    style={styles.textOutput}
-                                    value={remarks[currentIndex] || ''}
-                                    onChangeText={(text) => {
-                                        let newRemarks = [...remarks];
-                                        newRemarks[currentIndex] = text;
-                                        setRemarks(newRemarks)
-                                    }}
-                                    multiline
-                                />
-                            </View>
-                            <View style={styles.imageCard}>
-                                <TouchableOpacity onPress={() => pickImage(index)} activeOpacity={0.7} style={styles.imageCard}>
-                                    {images[index] ? (
-                                        <>
-                                            <Image source={{ uri: images[index] }} style={styles.image} />
-                                        </>
-                                    ) : (
-                                        <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-                            <View style={styles.paginationContainer}>
-                                {images.map((_, i) => (
-                                    <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
-                                ))}
-                            </View>
-
-                            {/* Buttons Section */}
-                        </>
-                    )} />
-            </View>
-
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
-                    <Text style={styles.buttonText}>Extract Text</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                    <Text style={styles.buttonText} >Submit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.button} onPress={addNewSlide}>
-                    <Text style={styles.buttonText}>Add Picture</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
-                    <Text style={styles.buttonText}>Remove Slide</Text>
-                </TouchableOpacity>
-            </View>
-
-
-        </ScrollView>
+        </View>
     );
 }
 const styles = StyleSheet.create({
@@ -376,9 +519,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderWidth: 1,
         borderRadius: 10,
-        padding: 10,
+        padding: 5,
         marginVertical: 5,
-        height: '45%',
         backgroundColor: '#2986cc',  // Active dot color
 
 
@@ -387,15 +529,37 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
-        height: '100%',
         flexWrap: 'wrap',
         flex: 1,
         paddingHorizontal: 10,
-        
+        overflow: 'hidden'
     },
     buttonText: {
         color: '#fff',
 
+    },
+    cameraContainer: {
+        width: '100%',
+        height: 200,
+        backgroundColor: '#ddd',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 10,
+    },
+    camera: {
+        width: '100%',
+        height: '100%'
+    },
+    /* captureButton: {
+        backgroundColor: '#4caf50',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 10,
+    }, */
+    captureButtonText: {
+        color: '#fff',
+        fontSize: 16,
     },
     container: {
         flex: 1,
@@ -409,9 +573,9 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         backgroundColor: 'transparent',
-        /*    borderWidth: 1,
-           borderColor: '#333',
-           borderRadius: 15, */
+        /* borderWidth: 1,
+        borderColor: '#333',
+        borderRadius: 15, */
     },
     dot: {
         width: 10,
@@ -437,12 +601,12 @@ const styles = StyleSheet.create({
     },
     imageCard: {
         width: '100%',
-        height: 250,
+        height: 200,
         backgroundColor: '#ddd',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 10,
-        padding: 5,
+        padding: 10,
     },
     image: {
         width: '100%',
@@ -462,7 +626,7 @@ const styles = StyleSheet.create({
         elevation: 3,
         width: '100%',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 15,
         position: 'relative',
     },
     overlayLoading: {
@@ -503,7 +667,8 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: '#f0f0f0',
         borderRadius: 5,
-        minHeight: 60,
+        minHeight: 40,
+        marginTop: 5
     },
     ticketContainer: {
         width: '100%',
@@ -511,6 +676,15 @@ const styles = StyleSheet.create({
         borderColor: '#333',
         borderRadius: 10,
         marginVertical: 20,
+        overflow: 'hidden',
+        backgroundColor: '#fff',
+    },
+    imageContainer: {
+        width: '100%',
+        borderWidth: 1,
+        borderColor: '#333',
+        borderRadius: 10,
+        marginBottom: 20,
         overflow: 'hidden',
         backgroundColor: '#fff',
     },
@@ -526,6 +700,13 @@ const styles = StyleSheet.create({
     ticketBody: {
         padding: 10,
     },
+    toggleButton: {
+        backgroundColor: '#ddd',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+
     tripId: {
         fontSize: 18,
         fontWeight: 'bold',
@@ -535,5 +716,80 @@ const styles = StyleSheet.create({
     value: {
         fontSize: 16,
         color: '#000',
+    },
+
+
+
+    fullscreenCameraContainer: {
+        position: 'absolute',
+        height: '100%',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'black',
+        zIndex: 100,
+    },
+    fullscreenCamera: {
+        flex: 1,
+    },
+    captureButton: {
+        position: 'absolute',
+        bottom: 30,
+        alignSelf: 'center',
+        backgroundColor: '#4caf50',
+        padding: 15,
+        borderRadius: 50,
+    },
+    captureButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        backgroundColor: '#ff4444',
+        padding: 5,
+        borderRadius: 100,
+    },
+    closeButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
+    fullscreenPreviewContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'black',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100, // Ensure it appears on top of everything
+    },
+    fullscreenPreviewImage: {
+        width: '100%',
+        height: '100%',
+    },
+    retakeButton: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        backgroundColor: 'transparent',
+        padding: 5,
+        borderRadius: 100,
+        borderWidth: 2,
+        borderColor: '#ff4444',
+    },
+    checkButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        backgroundColor: 'transparent',
+        padding: 5,
+        borderRadius: 100,
+        borderWidth: 2,
+        borderColor: 'cyan',
     },
 });
