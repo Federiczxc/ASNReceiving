@@ -16,8 +16,8 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = '/media/'  # URL prefix for media files
-#MEDIA_ROOT = BASE_DIR / 'media'
-MEDIA_ROOT = '//192.168.1.200/Central Sourcecodes/DEV/Fed/ASNUpload'
+MEDIA_ROOT = BASE_DIR / 'media'
+#MEDIA_ROOT = '//192.168.1.200/Central Sourcecodes/DEV/Fed/ASNUpload'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

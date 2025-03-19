@@ -53,7 +53,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="manage_upload/[id]"
             options={{
-              title: 'Edit ASN Upload', // Set the title here
+              title: 'View ASN Upload', // Set the title here
             }}
           />
           <Stack.Screen

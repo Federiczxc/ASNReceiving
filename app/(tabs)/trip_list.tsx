@@ -68,10 +68,10 @@ export default function TripList() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Trip List</Text>
+            <Text style={styles.title}>Trip Ticket List</Text>
             <TextInput
                 style={styles.searchBar}
-                placeholder="Search by Trip ID"
+                placeholder="Search by Trip Ticket ID"
                 keyboardType="numeric"
                 value={searchQuery}
                 onChangeText={(text) => {
@@ -93,7 +93,7 @@ export default function TripList() {
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
+                                <Text style={styles.tripId}>Trip Ticket ID: {item.trip_ticket_id} </Text>
                                 <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy hh:mm a')}</Text>
 
                             </View>

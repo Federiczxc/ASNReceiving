@@ -359,8 +359,8 @@ class UploadOutslipView(APIView):
                     file_path = f'outslips/{upload_image.name}'
                     saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
                     base_url = settings.BASE_URL
-                   # file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
-                    file_url = f"http:{settings.MEDIA_ROOT}/{saved_path}"
+                    file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
+                    #file_url = f"http:{settings.MEDIA_ROOT}/{saved_path}"
                     
                     outslip_image = serializer.save(
                         upload_files=file_url,
@@ -390,7 +390,7 @@ class UploadOutslipView(APIView):
         return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class EditUploadedPictures(APIView):
+""" class EditUploadedPictures(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
@@ -447,7 +447,7 @@ class EditUploadedPictures(APIView):
             return Response ({'message': 'Update successful'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+ """
 class SaveLocationView(APIView):
     permission_classes = [AllowAny]
     

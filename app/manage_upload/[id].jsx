@@ -28,12 +28,12 @@ export default function OutslipUpload() {
     const [ocrText, setOcrText] = useState('');
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded2, setIsExpanded2] = useState(true);
     const trip_ticket_detail_id = id;
     const [images, setImages] = useState([null]);
     const [ocrResults, setOcrResults] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [editableOcrText, setEditableOcrText] = useState(ocrText);
-    const [opened, setOpened] = useState(false);
     const [removedImageIds, setRemovedImageIds] = useState([]);
     const [remarks, setRemarks] = useState([]);
     useEffect(() => {
@@ -67,118 +67,118 @@ export default function OutslipUpload() {
         fetchData();
     }, []);
     /* console.log("brara", tripBranch); */
-    const pickImage = async (index) => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 1,
-        });
-        if (!result.canceled) {
-            let newImages = [...images];
-            newImages[index] = result.assets[0].uri;
-            setImages(newImages);
-        }
-    };
-    const addNewSlide = () => {
-        setImages(prevImages => {
-            const newImages = [...prevImages, null];
-            setOcrResults(prevOcr => [...prevOcr, '']);
-            setRemarks(prevRemarks => [...prevRemarks, '']);
-            setUploadOutslip(prevUpload => [...prevUpload, {}]); // Update the data used in Carousel
-            setCurrentIndex(newImages.length - 1); // Move to the new slide
-            return newImages;
-        });
-        console.log("imaima", images)
-        console.log("adad",);
-        requestAnimationFrame(() => {
-            Notifier.showNotification({
-                title: 'Success',
-                description: 'Added new picture!',
-                duration: 3000,
-            });
-        });
-    };
-
-    const removeSlide = (index) => {
-        if (images.length === 1) {
-            Alert.alert("Cannot remove the last slide.");
-            return;
-        }
-
-        let updatedImages = [...images];
-        updatedImages.splice(index, 1);
-
-        let updatedOcrResults = [...ocrResults];
-        updatedOcrResults.splice(index, 1);
-
-        let updatedRemarks = [...remarks];
-        updatedRemarks.splice(index, 1);
-
-        let updatedUploadOutslip = [...uploadOutslip];
-        updatedUploadOutslip.splice(index, 1);
-
-        setImages(updatedImages);
-        setOcrResults(updatedOcrResults);
-        setRemarks(updatedRemarks);
-        setUploadOutslip(updatedUploadOutslip);
-
-        if (uploadOutslip[index]?.upload_id) {
-            setRemovedImageIds(prevIds => [...prevIds, uploadOutslip[index].upload_id]);
-            console.log("removed", removedImageIds);
-        }
-        // Adjust the currentIndex to point to a valid slide
-        let newIndex = currentIndex;
-        if (currentIndex === index) {
-            // If the removed slide was the current one, move to the previous slide
-            newIndex = Math.max(0, index - 1);
-        } else if (currentIndex > index) {
-            // If the removed slide was before the current one, adjust the currentIndex
-            newIndex = currentIndex - 1;
-        }
-
-        setCurrentIndex(newIndex);
-
-        requestAnimationFrame(() => {
-            Notifier.showNotification({
-                title: 'Success',
-                description: 'Slide removed!',
-                duration: 3000,
-            });
-        });
-    };
-    const handleOCR = async (index) => {
-        setIsLoading(true);
-
-        if (!images[index]) {
-            Alert.alert('No image selected', 'Please select an image first.');
-            return;
-        }
-        try {
-            const formData = new FormData();
-            formData.append('image', {
-                uri: images[index],
-                type: 'image/jpeg',
-                name: 'photo.jpg',
-            });
-            const response = await api.post('/ocr/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            let newOcrResults = [...ocrResults];
-            newOcrResults[index] = response.data.text || 'No text detected';
-            setOcrResults(newOcrResults);
-            setEditableOcrText(newOcrResults[index]);
-            console.log("formdaa", formData);
-            console.log("ocrreuslts", newOcrResults);
-        } catch (error) {
-            console.error('Error during OCR processing:', error);
-            Alert.alert('Error', 'Failed to process the image. Please try again.');
-        }
-        finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleSubmit = async () => {
+    /*    const pickImage = async (index) => {
+           const result = await ImagePicker.launchImageLibraryAsync({
+               mediaTypes: ImagePicker.MediaTypeOptions.Images,
+               allowsEditing: true,
+               quality: 1,
+           });
+           if (!result.canceled) {
+               let newImages = [...images];
+               newImages[index] = result.assets[0].uri;
+               setImages(newImages);
+           }
+       };
+       const addNewSlide = () => {
+           setImages(prevImages => {
+               const newImages = [...prevImages, null];
+               setOcrResults(prevOcr => [...prevOcr, '']);
+               setRemarks(prevRemarks => [...prevRemarks, '']);
+               setUploadOutslip(prevUpload => [...prevUpload, {}]); // Update the data used in Carousel
+               setCurrentIndex(newImages.length - 1); // Move to the new slide
+               return newImages;
+           });
+           console.log("imaima", images)
+           console.log("adad",);
+           requestAnimationFrame(() => {
+               Notifier.showNotification({
+                   title: 'Success',
+                   description: 'Added new picture!',
+                   duration: 3000,
+               });
+           });
+       };
+   
+       const removeSlide = (index) => {
+           if (images.length === 1) {
+               Alert.alert("Cannot remove the last slide.");
+               return;
+           }
+   
+           let updatedImages = [...images];
+           updatedImages.splice(index, 1);
+   
+           let updatedOcrResults = [...ocrResults];
+           updatedOcrResults.splice(index, 1);
+   
+           let updatedRemarks = [...remarks];
+           updatedRemarks.splice(index, 1);
+   
+           let updatedUploadOutslip = [...uploadOutslip];
+           updatedUploadOutslip.splice(index, 1);
+   
+           setImages(updatedImages);
+           setOcrResults(updatedOcrResults);
+           setRemarks(updatedRemarks);
+           setUploadOutslip(updatedUploadOutslip);
+   
+           if (uploadOutslip[index]?.upload_id) {
+               setRemovedImageIds(prevIds => [...prevIds, uploadOutslip[index].upload_id]);
+               console.log("removed", removedImageIds);
+           }
+           // Adjust the currentIndex to point to a valid slide
+           let newIndex = currentIndex;
+           if (currentIndex === index) {
+               // If the removed slide was the current one, move to the previous slide
+               newIndex = Math.max(0, index - 1);
+           } else if (currentIndex > index) {
+               // If the removed slide was before the current one, adjust the currentIndex
+               newIndex = currentIndex - 1;
+           }
+   
+           setCurrentIndex(newIndex);
+   
+           requestAnimationFrame(() => {
+               Notifier.showNotification({
+                   title: 'Success',
+                   description: 'Slide removed!',
+                   duration: 3000,
+               });
+           });
+       };
+       const handleOCR = async (index) => {
+           setIsLoading(true);
+   
+           if (!images[index]) {
+               Alert.alert('No image selected', 'Please select an image first.');
+               return;
+           }
+           try {
+               const formData = new FormData();
+               formData.append('image', {
+                   uri: images[index],
+                   type: 'image/jpeg',
+                   name: 'photo.jpg',
+               });
+               const response = await api.post('/ocr/', formData, {
+                   headers: { 'Content-Type': 'multipart/form-data' },
+               });
+               let newOcrResults = [...ocrResults];
+               newOcrResults[index] = response.data.text || 'No text detected';
+               setOcrResults(newOcrResults);
+               setEditableOcrText(newOcrResults[index]);
+               console.log("formdaa", formData);
+               console.log("ocrreuslts", newOcrResults);
+           } catch (error) {
+               console.error('Error during OCR processing:', error);
+               Alert.alert('Error', 'Failed to process the image. Please try again.');
+           }
+           finally {
+               setIsLoading(false);
+           }
+       };
+    */
+    /* const handleSubmit = async () => {
         setIsLoading(true);
         const accessToken = await AsyncStorage.getItem('access_token');
         const userData = await AsyncStorage.getItem('user_data');
@@ -264,7 +264,7 @@ export default function OutslipUpload() {
         finally {
             setIsLoading(false);
         }
-    };
+    }; */
 
 
     return (
@@ -304,26 +304,33 @@ export default function OutslipUpload() {
 
 
             <View style={styles.container2}>
-
-                <Carousel
-                    key={images.length}
-                    loop={false}
-                    width={Dimensions.get('window').width * 1}
-                    height={500}
-                    data={uploadOutslip}
-                    scrollAnimationDuration={200}
-                    onProgressChange={(_, absoluteProgress) => {
-                        const newIndex = Math.round(absoluteProgress);
-                        setCurrentIndex(newIndex);
-                        setEditableOcrText(ocrResults[newIndex] || '');
-                    }}
-                    renderItem={({ index }) => (
+                <View style={styles.imageContainer}>
+                    <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
+                        <View style={styles.ticketHeader}>
+                            <Text style={styles.tripId}>Uploaded Signed ASN</Text>
+                        </View>
+                    </TouchableOpacity>
+                    {isExpanded2 && (
                         <>
+                            <Carousel
+                                key={images.length}
+                                loop={false}
+                                width={Dimensions.get('window').width * 1}
+                                height={Dimensions.get('window').height * 0.5}
+                                data={uploadOutslip}
+                                scrollAnimationDuration={200}
+                                onProgressChange={(_, absoluteProgress) => {
+                                    const newIndex = Math.round(absoluteProgress);
+                                    setCurrentIndex(newIndex);
+                                    setEditableOcrText(ocrResults[newIndex] || '');
+                                }}
+                                renderItem={({ index }) => (
+                                    <>
 
-                            {/* Image Preview & OCR Result Card */}
-                            <View style={styles.ocrCard}>
+                                        {/* Image Preview & OCR Result Card */}
+                                        <View style={styles.ocrCard}>
 
-                                <Text style={styles.ocrTitle}>OCR Result:</Text>
+                                            {/*  <Text style={styles.ocrTitle}>OCR Result:</Text>
                                 <TextInput
                                     style={styles.textOutput}
                                     value={editableOcrText || ''}  // Use editable state
@@ -334,42 +341,56 @@ export default function OutslipUpload() {
                                         setEditableOcrText(text);  // Keep the editable text updated
                                     }}
                                     multiline
-                                />
-                                <Text style={styles.ocrTitle}>Remarks:</Text>
-                                <TextInput
-                                    style={styles.textOutput}
-                                    value={remarks[currentIndex] || ''}
-                                    onChangeText={(text) => {
-                                        let newRemarks = [...remarks];
-                                        newRemarks[currentIndex] = text;
-                                        setRemarks(newRemarks)
-                                    }}
-                                    multiline
-                                />
-                            </View>
-                            <View style={styles.imageCard}>
-                                <TouchableOpacity onPress={() => pickImage(index)} activeOpacity={0.7} style={styles.imageCard}>
-                                    {images[index] ? (
-                                        <>
-                                            <Image source={{ uri: images[index] }} style={styles.image} />
-                                        </>
-                                    ) : (
-                                        <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
+                                    editable={false}
+                                /> */}
+                                            <Text style={styles.ocrTitle}>Remarks:</Text>
+                                            <TextInput
+                                                style={styles.textOutput}
+                                                value={remarks[currentIndex] || ''}
+                                                onChangeText={(text) => {
+                                                    let newRemarks = [...remarks];
+                                                    newRemarks[currentIndex] = text;
+                                                    setRemarks(newRemarks)
+                                                }}
+                                                multiline
+                                                editable={false}
+
+                                            />
+                                        </View>
+                                        <View style={styles.imageView}>
+                                            {/* <TouchableOpacity onPress={() => pickImage(index)} activeOpacity={0.7} style={styles.imageCard}> */}
+                                            <View style={styles.imageCard}>
+
+                                                {images[index] ? (
+                                                    <>
+                                                        <Image source={{ uri: images[index] }} style={styles.image} />
+                                                    </>
+                                                ) : (
+                                                    <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
+                                                )}
+                                            </View>
+
+                                            {/* </TouchableOpacity> */}
+                                        </View>
+
+
+                                        {/* Buttons Section */}
+                                    </>
+                                )} />
                             <View style={styles.paginationContainer}>
                                 {images.map((_, i) => (
                                     <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
                                 ))}
                             </View>
-
-                            {/* Buttons Section */}
                         </>
-                    )} />
+                    )}
+
+                </View>
+
+
             </View>
 
-            <View style={styles.buttonContainer}>
+            {/* <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
                     <Text style={styles.buttonText}>Extract Text</Text>
                 </TouchableOpacity>
@@ -385,7 +406,7 @@ export default function OutslipUpload() {
                 <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
                     <Text style={styles.buttonText}>Remove Slide</Text>
                 </TouchableOpacity>
-            </View>
+            </View> */}
 
 
         </ScrollView>
@@ -464,14 +485,25 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
     },
+    imageView: {
+        width: '100%',
+        flex: 1,
+    },
     imageCard: {
         width: '100%',
-        height: 250,
+        height: '100%',
         backgroundColor: '#ddd',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 10,
-        padding: 5,
+    },
+    imageContainer: {
+        width: '100%',
+        borderWidth: 1,
+        borderRadius: 10,
+        marginBottom: 20,
+        overflow: 'hidden',
+        flex: 1,
     },
     image: {
         width: '100%',
@@ -518,7 +550,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 10
+        marginVertical: 15
     },
     placeholder: {
         fontSize: 14,

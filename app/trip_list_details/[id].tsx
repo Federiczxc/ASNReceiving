@@ -73,14 +73,14 @@ export default function TripListDetails() {
             Alert.alert('Error', 'Location permission denied');
             return null;
         }
-    
+
         try {
             const location = await Location.getCurrentPositionAsync({});
-            const {latitude, longitude} = location.coords;
+            const { latitude, longitude } = location.coords;
             console.log('Latitude', latitude);
             console.log('Longitude', longitude);
 
-            return {latitude, longitude};
+            return { latitude, longitude };
         } catch (error) {
             console.error('Error getting location:', error);
             Alert.alert('Error', 'Failed to get location');
@@ -183,7 +183,7 @@ export default function TripListDetails() {
                 Alert.alert("Error", JSON.stringify(error.response ? error.response.data : error.message));
             }
         }
-        finally{
+        finally {
             setLoading(false)
         }
     };
@@ -241,13 +241,13 @@ export default function TripListDetails() {
             console.log("TUITEUTEITIE", location, latitude, longitude);
 
             // Get additional location data (e.g., address) using LocationIQ or another service
-         
+
             const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
             console.log("titest2 ", currentDate);
             console.log("titesmet2 ", currentTime);
             console.log("tripticketinin", trip_ticket_id, id);
-          
+
             console.log("locloc", latitude, longitude, currentDate);
 
             const clockInData = {
@@ -274,7 +274,7 @@ export default function TripListDetails() {
                 Alert.alert("Error", JSON.stringify(error.response.data));
             }
         }
-        finally{
+        finally {
             setLoading(false)
         }
     };
@@ -334,24 +334,28 @@ export default function TripListDetails() {
     }
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
-            <View style={styles.clockContainer}>
-                <TouchableOpacity onPress={timeIn}>
-                    <View style={styles.attendanceButton}>
-                        <Text>
-                            Clock in
-                            <Ionicons name={"alarm-outline"} size={24} />
-                        </Text>
-                    </View>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={timeOut}>
-                    <View style={styles.attendanceButton2}>
-                        <Text>
-                            Clock out
-                            <Ionicons name={"alarm-outline"} size={24} />
-                        </Text>
-                    </View>
-                </TouchableOpacity>
+            <View style={styles.headerContainer}>
+
+                <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
+                <View style={styles.clockContainer}>
+                    <TouchableOpacity onPress={timeIn}>
+                        <View style={styles.attendanceButton}>
+                            <Text>
+                                Time in
+                            </Text>
+                            <Ionicons style={styles.attendanceIcon} name={"enter-outline"} size={19} />
+
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={timeOut}>
+                        <View style={styles.attendanceButton2}>
+                            <Text>
+                                Time out
+                            </Text>
+                            <Ionicons style={styles.attendanceIcon} name={"exit-outline"} size={19} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <FlatList
@@ -400,10 +404,12 @@ export default function TripListDetails() {
 const styles = StyleSheet.create({
     attendanceButton: {
         borderWidth: 1.5,
+        flexDirection: 'row',
         borderRadius: 10,
         padding: 10,
-        marginHorizontal: 5,
+        marginHorizontal: 10,
         borderColor: 'green',
+        marginBottom: 5
     },
     attendanceButton2: {
         borderWidth: 1.5,
@@ -411,19 +417,30 @@ const styles = StyleSheet.create({
         padding: 10,
         marginHorizontal: 5,
         borderColor: 'red',
+        marginBottom: 5,
+        flexDirection: 'row',
+
+    },
+    attendanceIcon: {
+        marginLeft: 5,
     },
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: 'ffd33d'
+        backgroundColor: 'ffd33d',
     },
     clockContainer: {
         flexDirection: 'row',
     },
+    headerContainer: {
+        width: '100%',
+        alignContent: 'center',
+        alignItems: 'center',
+    },
     title: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 10,
     },

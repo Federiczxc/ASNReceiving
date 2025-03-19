@@ -29,7 +29,6 @@ export default function LoginPage() {
       } else {
         console.error("User data not found in the response.");
       }
-      console.log("rerere", response.data);
       router.push('/profile');
     }
     catch (error) {

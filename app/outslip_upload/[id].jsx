@@ -309,7 +309,7 @@ export default function OutslipUpload() {
                         style={styles.retakeButton}
 
                     >
-                        <Ionicons color='hsl(0,0%,90%)' name={"arrow-undo-outline"} size={32} />
+                        <Ionicons color='hsl(0,0%,90%)' name={"trash-outline"} size={32} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => saveCapturedPicture(currentIndex)}
@@ -388,7 +388,7 @@ export default function OutslipUpload() {
                                     key={images.length}
                                     loop={false}
                                     width={Dimensions.get('window').width * 1}
-                                    height={410}
+                                    height={Dimensions.get('window').height * 0.5}
                                     data={images}
                                     scrollAnimationDuration={200}
                                     onProgressChange={(_, absoluteProgress) => {
@@ -396,12 +396,13 @@ export default function OutslipUpload() {
                                         setCurrentIndex(newIndex);
                                         setEditableOcrText(ocrResults[newIndex] || '');
                                     }}
+                                    style={styles.carouselView}
                                     renderItem={({ index }) => (
                                         <>
 
                                             {/* Image Preview & OCR Result Card */}
                                             <View style={styles.ocrCard}>
-                                                {ocrResults.length > 0 && (
+                                                {/*  {ocrResults.length > 0 && (
                                                     <>
                                                         <Text style={styles.ocrTitle}>OCR Result:</Text>
                                                         <TextInput
@@ -417,7 +418,7 @@ export default function OutslipUpload() {
                                                         />
                                                     </>
                                                 )}
-
+ */}
                                                 <Text style={styles.ocrTitle}>Remarks:</Text>
                                                 <TextInput
                                                     style={styles.textOutput}
@@ -430,14 +431,17 @@ export default function OutslipUpload() {
                                                     multiline
                                                 />
                                             </View>
-                                            <View style={styles.imageCard}>
+                                            <View style={styles.imageView}>
                                                 <TouchableOpacity onPress={() => setIsCameraFullscreen(true)} activeOpacity={0.7} style={styles.imageCard}>
                                                     {images[index] ? (
                                                         <>
                                                             <Image source={{ uri: images[index] }} style={styles.image} />
                                                         </>
                                                     ) : (
-                                                        <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
+                                                        <>
+                                                            <Ionicons color='hsl(0, 0%, 50%)' name='camera-outline' size={40} />
+                                                            <Text style={styles.placeholder}>No image captured. Tap to take a picture</Text>
+                                                        </>
                                                     )}
                                                 </TouchableOpacity>
                                             </View>
@@ -477,21 +481,23 @@ export default function OutslipUpload() {
                                 </View>
 
                                 <View style={styles.buttonContainer}>
-                                    <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
+                                    {/* <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
                                         <Text style={styles.buttonText}>Extract Text</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                                        <Text style={styles.buttonText} >Submit</Text>
-                                    </TouchableOpacity>
+                                    </TouchableOpacity> */}
+
 
                                     <TouchableOpacity style={styles.button} onPress={addNewSlide}>
                                         <Text style={styles.buttonText}>Add Slide</Text>
-                                    </TouchableOpacity>
 
+                                    </TouchableOpacity>
                                     <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
                                         <Text style={styles.buttonText}>Remove Slide</Text>
                                     </TouchableOpacity>
+
                                 </View>
+                                <TouchableOpacity style={styles.button2} onPress={handleSubmit}>
+                                    <Text style={styles.buttonText} >Submit</Text>
+                                </TouchableOpacity>
                             </>
                         )}
 
@@ -514,24 +520,34 @@ const styles = StyleSheet.create({
     },
 
     button: {
-        width: '48%',
+        width: '35%',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderRadius: 10,
         padding: 5,
         marginVertical: 5,
+        marginHorizontal: 20,
+        backgroundColor: '#2986cc',  // Active dot color
+    },
+    button2: {
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 15,
         backgroundColor: '#2986cc',  // Active dot color
 
-
+        marginTop: 15
     },
     buttonContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         width: '100%',
         flexWrap: 'wrap',
         flex: 1,
-        paddingHorizontal: 10,
+        paddingHorizontal: 0,
         overflow: 'hidden'
     },
     buttonText: {
@@ -550,13 +566,12 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%'
     },
-    /* captureButton: {
+    captureButton: {
         backgroundColor: '#4caf50',
-        padding: 10,
-        borderRadius: 5,
+        padding: 3,
+        borderRadius: 0,
         alignItems: 'center',
-        marginBottom: 10,
-    }, */
+    },
     captureButtonText: {
         color: '#fff',
         fontSize: 16,
@@ -573,9 +588,7 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         backgroundColor: 'transparent',
-        /* borderWidth: 1,
-        borderColor: '#333',
-        borderRadius: 15, */
+
     },
     dot: {
         width: 10,
@@ -599,22 +612,43 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
     },
+    carouselView: {
+        /* borderWidth: 3,
+        borderColor: 'black', */
+        flex: 1,
+    },
+    imageView: {
+        width: '100%',
+        /* borderColor: 'yellow',
+        borderWidth: 1, */
+        flex: 1,
+    },
     imageCard: {
         width: '100%',
-        height: 200,
+        height: '100%',
         backgroundColor: '#ddd',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 10,
-        padding: 10,
+        /* borderWidth: 1,
+        borderColor: 'blue', */
     },
     image: {
         width: '100%',
         height: '100%',
         borderRadius: 20,
         resizeMode: 'contain',
+        /* borderWidth: 1,
+        borderColor: 'red', */
     },
-
+    imageContainer: {
+        width: '100%',
+        borderWidth: 1,
+        borderRadius: 10,
+        marginBottom: 20,
+        overflow: 'hidden',
+        flex: 1,
+    },
     ocrCard: {
         backgroundColor: '#fff',
         padding: 16,
@@ -626,7 +660,7 @@ const styles = StyleSheet.create({
         elevation: 3,
         width: '100%',
         alignItems: 'center',
-        marginBottom: 15,
+        marginBottom: 0,
         position: 'relative',
     },
     overlayLoading: {
@@ -679,15 +713,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         backgroundColor: '#fff',
     },
-    imageContainer: {
-        width: '100%',
-        borderWidth: 1,
-        borderColor: '#333',
-        borderRadius: 10,
-        marginBottom: 20,
-        overflow: 'hidden',
-        backgroundColor: '#fff',
-    },
+
     ticketFooter: {
         backgroundColor: '#4caf50',
         padding: 10,
@@ -733,14 +759,14 @@ const styles = StyleSheet.create({
     fullscreenCamera: {
         flex: 1,
     },
-    captureButton: {
+    /* captureButton: {
         position: 'absolute',
         bottom: 30,
         alignSelf: 'center',
         backgroundColor: '#4caf50',
         padding: 15,
         borderRadius: 50,
-    },
+    }, */
     captureButtonText: {
         color: '#fff',
         fontSize: 16,

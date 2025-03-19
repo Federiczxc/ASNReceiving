@@ -113,7 +113,7 @@ export default function ManageAttendance() {
                             <View style={styles.ticketContainer}>
                                 <View style={styles.ticketHeader}>
                                     <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
-                                    <Text style={styles.footerText}> Trip ID: {item.trip_ticket_id} </Text>
+                                    <Text style={styles.footerText}> Trip Ticket ID: {item.trip_ticket_id} </Text>
                                     <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
                                 </View>
                                 <View style={styles.ticketBody}>
