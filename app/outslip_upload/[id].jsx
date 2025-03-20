@@ -1,10 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 import * as ImagePicker from 'expo-image-picker';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import api from '../../api';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import Carousel from 'react-native-reanimated-carousel';
@@ -26,7 +26,7 @@ export default function OutslipUpload() {
         document_amount: null
     });
     LogBox.ignoreLogs(['findDOMNode is deprecated']);
-
+    const navigation = useNavigation();
     const [isLoading, setIsLoading] = useState(true);
     const [ocrText, setOcrText] = useState('');
     const { id } = useLocalSearchParams();
@@ -63,6 +63,18 @@ export default function OutslipUpload() {
         };
         fetchData();
     }, []);
+    useFocusEffect(
+        useCallback(() => {
+            navigation.setOptions({
+                headerShown: !(isCameraFullscreen || cameraPreview),
+            });
+            return () => {
+                navigation.setOptions({
+                    headerShown: true,
+                });
+            };
+        }, [isCameraFullscreen, cameraPreview])
+    );
     /* console.log("brara", tripBranch); */
     const pickImage = async (index) => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -246,7 +258,14 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-            /* router.push('/trip_list') */
+            router.push({
+                pathname: 'trip_list_details/[id]',
+                params: {
+                    id: tripBranch.branch_id,
+                    trip_ticket_id: outslipDetail.trip_ticket_id.toString()
+                }
+            }
+            )
             console.log('succ', response.data);
         }
         catch (error) {
@@ -309,13 +328,14 @@ export default function OutslipUpload() {
                         style={styles.retakeButton}
 
                     >
-                        <Ionicons color='hsl(0,0%,90%)' name={"trash-outline"} size={32} />
+                        <Ionicons color='hsl(0,0%,90%)' name={"trash-outline"} size={36} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => saveCapturedPicture(currentIndex)}
                         style={styles.checkButton}
                     >
-                        <Ionicons color='hsl(0,0%,90%)' name={"checkmark-outline"} size={32} />
+                        <Ionicons color='hsl(0,0%,90%)' name={"checkmark-outline"} size={42} />
+
                     </TouchableOpacity>
                 </View>
 
@@ -418,7 +438,7 @@ export default function OutslipUpload() {
                                                         />
                                                     </>
                                                 )}
- */}
+                                                    */}
                                                 <Text style={styles.ocrTitle}>Remarks:</Text>
                                                 <TextInput
                                                     style={styles.textOutput}
@@ -535,7 +555,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderRadius: 10,
+        borderRadius: 5,
         padding: 15,
         backgroundColor: '#2986cc',  // Active dot color
 
@@ -568,7 +588,7 @@ const styles = StyleSheet.create({
     },
     captureButton: {
         backgroundColor: '#4caf50',
-        padding: 3,
+        padding: 5,
         borderRadius: 0,
         alignItems: 'center',
     },
@@ -600,7 +620,9 @@ const styles = StyleSheet.create({
     infoSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 10,
+        borderWidth: 0.5,
+        padding: 10
+
     },
     label: {
         fontSize: 16,
@@ -641,6 +663,7 @@ const styles = StyleSheet.create({
         /* borderWidth: 1,
         borderColor: 'red', */
     },
+
     imageContainer: {
         width: '100%',
         borderWidth: 1,
@@ -724,7 +747,6 @@ const styles = StyleSheet.create({
     },
 
     ticketBody: {
-        padding: 10,
     },
     toggleButton: {
         backgroundColor: '#ddd',
@@ -792,30 +814,33 @@ const styles = StyleSheet.create({
         backgroundColor: 'black',
         justifyContent: 'center',
         alignItems: 'center',
+
         zIndex: 100, // Ensure it appears on top of everything
     },
     fullscreenPreviewImage: {
         width: '100%',
         height: '100%',
+        resizeMode: 'contain',
+        flex: 1,
     },
     retakeButton: {
         position: 'absolute',
-        top: 40,
+        bottom: 40,
         left: 20,
         backgroundColor: 'transparent',
         padding: 5,
         borderRadius: 100,
-        borderWidth: 2,
+        /* borderWidth: 2, */
         borderColor: '#ff4444',
     },
     checkButton: {
         position: 'absolute',
-        top: 40,
+        bottom: 40,
         right: 20,
         backgroundColor: 'transparent',
         padding: 5,
         borderRadius: 100,
-        borderWidth: 2,
+        /*  borderWidth: 2, */
         borderColor: 'cyan',
     },
 });

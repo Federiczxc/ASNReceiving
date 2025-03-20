@@ -43,6 +43,8 @@ export default function ManageAttendance() {
                 const accessToken = await AsyncStorage.getItem('access_token');
                 if (!accessToken) {
                     Alert.alert('Error', 'No access token found. Please log in.');
+                    router.push('/');
+
                     return;
                 }
                 const response = await api.get('/manage-attendance/',

@@ -174,12 +174,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     ticketBody: {
-        padding: 10,
     },
     infoSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 15,
+        borderWidth: 0.5,
+        padding: 10
+
     },
     label: {
         fontSize: 16,
@@ -187,8 +188,9 @@ const styles = StyleSheet.create({
         color: '#555',
     },
     value: {
-        fontSize: 16,
+        fontSize: 13.5,
         color: '#000',
+        marginTop: 3,
     },
     ticketFooter: {
         backgroundColor: '#4caf50',

@@ -473,7 +473,8 @@ const styles = StyleSheet.create({
     infoSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 10,
+        borderWidth: 0.5,
+        padding: 10
     },
     label: {
         fontSize: 16,
@@ -585,7 +586,6 @@ const styles = StyleSheet.create({
     },
 
     ticketBody: {
-        padding: 10,
     },
     tripId: {
         fontSize: 18,

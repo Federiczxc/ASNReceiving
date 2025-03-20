@@ -331,9 +331,21 @@ class UploadOutslipView(APIView):
             time_in__date=datetime.now().date(),
             time_out__isnull=False,
         )
+        
+        has_upload = OutslipImagesModel.objects.filter(
+            trip_ticket_detail_id = trip_ticket_detail_id,
+            branch_id = branch_id,
+            created_by=user_id,
+        )
+        
+        if has_upload:
+            return Response(
+                {"Error": f"You have already uploaded, you can't upload anymore"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         if has_clock_out:
             return Response(
-                {"Error": f"You have already clocked out, you can't upload or edit anymore.(TEST VLAIDATIOSN SCONFIRMATION)"},
+                {"Error": f"You have already clocked out, you can't upload or edit anymore"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         if not no_clock_in:
@@ -536,7 +548,7 @@ class ClockInAttendance(APIView):
               ).exclude(branch_id=branch_id).first()
             if no_clock_out:
                 return Response(
-                    {"error": f"You haven't clocked out at trip ticket ID: {no_clock_out.trip_ticket_id} branch ID:{no_clock_out.branch_id}"},
+                    {"error": f"You haven't clocked out at trip ticket ID:{no_clock_out.trip_ticket_id} branch ID:{no_clock_out.branch_id}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             else:

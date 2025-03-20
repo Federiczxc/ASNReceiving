@@ -34,14 +34,14 @@ class LoginSerializer(serializers.Serializer):
         try:    
             user = User.objects.get(user_code=username)
         except User.DoesNotExist:
-            raise serializers.ValidationError("Invalid credentiaals.")
+            raise serializers.ValidationError("User doesn't exist.")
         with connection.cursor() as cursor:
             cursor.execute("SELECT dbo.fn_decrypt_pb(%s) AS decrypted_password", [user.password])
             row = cursor.fetchone()
             decrypted_password = row[0]   
        # if not check_password(password, user.password):
         if password != decrypted_password:
-            raise serializers.ValidationError("Invalid creqedentials.")  # Incorrect password
+            raise serializers.ValidationError('Password is incorrect.')  # Incorrect password
         data['user'] = user
         return data
 

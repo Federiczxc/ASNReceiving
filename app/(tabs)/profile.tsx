@@ -32,6 +32,7 @@ export default function Profile() {
                 console.log("niono", accessToken, accessUser);
                 if (!accessToken || !accessUser) {
                     Alert.alert('Error', 'No access token found. Please log in');
+                    router.push('/');
                     return;
                 }
                 console.log("propro", response.data);
@@ -57,7 +58,7 @@ export default function Profile() {
                 <View style={styles.profileCard}>
                     <Text style={styles.greeting}>User Profile</Text>
                     <Text style={styles.name}>Username: {userData.user_name}</Text>
-                    <Text style={styles.empNo}>Employee Number: {userData.user_id}</Text>
+                    <Text style={styles.empNo}>User ID: {userData.user_id}</Text>
                     <TouchableOpacity
                         style={styles.logoutButton}
                         onPress={async () => {

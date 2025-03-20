@@ -172,7 +172,7 @@ export default function TripListDetails() {
 
             const postResponse = await api.post("/clock-in/", clockInData);
             console.log("clockindata", postResponse.data);
-            Alert.alert("CLOCKEDIN", "Clocked in!");
+            Alert.alert("Attendance!", "You have successfully clocked in today");
             setLoading(false)
 
         } catch (error: any) {
@@ -180,7 +180,7 @@ export default function TripListDetails() {
                 Alert.alert("Error", "You have already clocked in today.");
             } else {
                 console.error("Error fetching location or clocking in:", error.response ? error.response.data : error.message);
-                Alert.alert("Error", JSON.stringify(error.response ? error.response.data : error.message));
+                Alert.alert("Error", JSON.stringify(error.response ? error.response.data.error : error.message));
             }
         }
         finally {
@@ -263,7 +263,7 @@ export default function TripListDetails() {
             });
 
             console.log("clockindata", postResponse.data)
-            Alert.alert("CLOCKEDOUT", "Clocked out!");
+            Alert.alert("Attendance!", "You have successfully time out!");
 
         } catch (error: any) {
             if (error.response && error.response.data.error === "You have already clocked out today.") {
@@ -271,7 +271,7 @@ export default function TripListDetails() {
             } else {
                 console.error("Error fetching location or clocking out:", error.response.data);
 
-                Alert.alert("Error", JSON.stringify(error.response.data));
+                Alert.alert("Error", JSON.stringify(error.response.data.error || error.response.data.detail));
             }
         }
         finally {
@@ -474,13 +474,14 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
     },
-    ticketBody: {
-        padding: 10,
+    ticketBody: {  
     },
     infoSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 15,
+        borderWidth: 0.5,
+        padding: 10
+
     },
     label: {
         fontSize: 16,

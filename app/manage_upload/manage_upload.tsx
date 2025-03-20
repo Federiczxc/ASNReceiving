@@ -33,6 +33,7 @@ export default function TripList() {
                 const accessToken = await AsyncStorage.getItem('access_token');
                 if (!accessToken) {
                     Alert.alert('Error', 'No access token found. Please log in.');
+                    router.push('/');
                     return;
                 }
                 const response = await api.get('/manage_upload/',
@@ -130,7 +131,7 @@ export default function TripList() {
                                         params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
                                     })}>
 
-                                        <Text style={styles.tripId}>Trip ID: {item.trip_ticket_id} </Text>
+                                        <Text style={styles.tripId}>Trip Ticket ID: {item.trip_ticket_id} </Text>
                                         <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
                                             ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
                                             : 'N/A'}</Text>
