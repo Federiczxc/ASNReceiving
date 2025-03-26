@@ -75,7 +75,22 @@ class OutslipImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = OutslipImagesModel
         fields = '__all__'
+        
+class OutslipItemQtySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OutslipItemQtyModel
+        fields = '__all__'
 
+class ItemMFSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemMFModel
+        fields = '__all__'
+
+class UOMMFSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UOMMFModel
+        fields = '__all__'
+          
 class BranchLogsSerializer(serializers.ModelSerializer):
     branch_details = TripBranchSerializer(source='branch', read_only=True)
     class Meta:

@@ -20,12 +20,14 @@ export default function OutslipUpload() {
     const [outslipDetail, setOutslipDetail] = useState({
         trip_ticket_id: null,
         trip_ticket_detail_id: null,
-        trans_name: null,
-        remarks: null,
-        branch_charges: null,
-        document_amount: null
+        trans_name: '',
+        remarks: '',
+        branch_id: null,
+        branch_name: '',
+        ref_trans_date: '',
+        ref_trans_id: null,
+        items: []
     });
-    LogBox.ignoreLogs(['findDOMNode is deprecated']);
     const navigation = useNavigation();
     const [isLoading, setIsLoading] = useState(true);
     const [ocrText, setOcrText] = useState('');
@@ -49,15 +51,25 @@ export default function OutslipUpload() {
         setIsLoading(true);
         const fetchData = async () => {
             try {
+                const accessToken = await AsyncStorage.getItem('access_token');
                 const response = await api.get('/outslipview/', {
-                    params: { trip_ticket_detail_id }
+                    params: { trip_ticket_detail_id },
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
                 });
+
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
                 console.log("out", response.data);
                 setIsLoading(false);
                 console.log("OCLE", ocrResults.length)
             } catch (error) {
+                if (error.response.status === 401) {
+                    Alert.alert('Error', 'Your login session has expired. Please log in');
+                    router.replace('/');
+                    return;
+                }
                 console.error(error);
             }
         };
@@ -250,7 +262,7 @@ export default function OutslipUpload() {
             const response = await api.post('/outslipupload/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    /* 'Authorization': `Bearer ${accessToken}`, */
+                    'Authorization': `Bearer ${accessToken}`,
                 },
             });
             Notifier.showNotification({
@@ -258,7 +270,7 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-            router.push({
+            router.replace({
                 pathname: 'trip_list_details/[id]',
                 params: {
                     id: tripBranch.branch_id,
@@ -285,8 +297,11 @@ export default function OutslipUpload() {
                 });
 
                 Alert.alert('Upload Failed', JSON.stringify(error.response.data));
-            } else {
-                Alert.alert('Upload Failed', 'An unexpected error occurred.');
+            }
+            if (error.response.status === 401) {
+                Alert.alert('Error', 'Your login session has expired. Please log in');
+                router.replace('/');
+                return;
             }
         }
         finally {
@@ -351,20 +366,60 @@ export default function OutslipUpload() {
                     <View style={styles.ticketContainer}>
                         <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.trip_ticket_detail_id}</Text>
+                                <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_id}</Text>
+                                <Text style={styles.tripId}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
                                 <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
                             </View>
+                            <Ionicons
+                                name={isExpanded ? "chevron-down" : "chevron-forward"}
+                                size={20}
+                                color="#666"
+                                style={{ alignSelf: 'center' }}
+                            />
                             {isExpanded && (
                                 <>
                                     <View style={styles.ticketBody}>
-                                        <View style={styles.infoSection}>
-                                            <Text style={styles.label}>Branch Charges:</Text>
-                                            <Text style={styles.value}>{outslipDetail.branch_charges}</Text>
+                                        <View style={styles.tableHeader}>
+                                            <View style={{ width: '30%', paddingLeft: 3 }}>
+                                                <Text style={styles.headerLabel}>Barcode</Text>
+                                            </View>
+                                            <View style={{ width: '45%' }}>
+
+                                                <Text style={styles.headerLabel}>Description</Text>
+                                            </View>
+                                            <View style={{ width: '15%' }}>
+
+                                                <Text style={styles.headerLabel}>QTY</Text>
+                                            </View>
+                                            <View style={{ width: '10%' }}>
+
+                                                <Text style={styles.headerLabel}>UOM</Text>
+                                            </View>
                                         </View>
-                                        <View style={styles.infoSection}>
-                                            <Text style={styles.label}>Document Amount:</Text>
-                                            <Text style={styles.value}>{outslipDetail.document_amount}</Text>
-                                        </View>
+
+                                        {outslipDetail.items.map((item) => (
+                                            <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                                <View style={styles.tableBody}>
+                                                    <View style={styles.bodyColumn1}>
+                                                        <Text style={styles.bodyLabel}>{item.barcode}</Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn2}>
+
+                                                        <Text style={styles.bodyLabel}>{item.item_description}</Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn3}>
+
+                                                        <Text style={styles.bodyLabel}>{item.item_qty}</Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn4}>
+
+                                                        <Text style={styles.bodyLabel}>{item.uom_code}</Text>
+                                                    </View>
+                                                </View>
+
+
+                                            </View>
+                                        ))}
                                     </View>
                                     <View style={styles.ticketFooter}>
                                         <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
@@ -843,4 +898,34 @@ const styles = StyleSheet.create({
         /*  borderWidth: 2, */
         borderColor: 'cyan',
     },
+    table: {
+    },
+    tableHeader: {
+        flexDirection: 'row',
+
+    },
+    headerLabel: {
+        fontWeight: 'bold',
+    },
+    tableBody: {
+        flexDirection: 'row',
+        padding: 5,
+        borderWidth: 0.5,
+    },
+    bodyLabel: {
+        fontSize: 10
+    },
+    bodyColumn1: {
+        width: '30%',
+    },
+    bodyColumn2: {
+        width: '45%',
+    },
+    bodyColumn3: {
+        width: '10%',
+    },
+    bodyColumn4: {
+        width: '10%',
+        marginLeft: 20
+    }
 });

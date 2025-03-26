@@ -70,6 +70,11 @@ export default function ManageAttendance() {
                     setAttendanceData([]);
 
                 }
+                if (error.response?.status === 401) {
+                    Alert.alert('Error', 'Your login session has expired. Please log in');
+                    router.replace('/');
+                    return;
+                }
             }
             finally {
                 setLoading(false);

@@ -30,13 +30,14 @@ export default function Profile() {
                 });
                 setUserData(response.data);
                 console.log("niono", accessToken, accessUser);
-                if (!accessToken || !accessUser) {
-                    Alert.alert('Error', 'No access token found. Please log in');
-                    router.push('/');
+
+                console.log("propro", response.data);
+            } catch (error: any) {
+                if (error.response.status === 401) {
+                    Alert.alert('Error', 'Your login session has expired. Please log in');
+                    router.replace('/');
                     return;
                 }
-                console.log("propro", response.data);
-            } catch (error) {
                 console.error('Error fetching user data:', error);
             } finally {
                 setLoading(false);

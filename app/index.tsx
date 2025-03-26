@@ -1,8 +1,9 @@
-import { Text, View, StyleSheet, Image, TextInput, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, Image, TextInput, Alert, BackHandler, TouchableOpacity } from "react-native";
 import { Notifier, Easing, NotifierComponents } from 'react-native-notifier'
 import { Link, useRouter } from 'expo-router';
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from 'axios';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api';
 import icon from '@/assets/images/winterpine-icon.png';
@@ -15,6 +16,38 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [errorData, setErrorData] = useState(null);
+
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert('', 'Are you sure you want to exit the app?', [
+        {
+          text: 'Cancel',
+          onPress: () => null,
+          style: 'cancel',
+        },
+        { 
+          text: 'YES', 
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('access_token');
+              await AsyncStorage.removeItem('user_data');
+            } catch (error) {
+              console.error('Error clearing AsyncStorage:', error);
+            }
+            BackHandler.exitApp();
+          }
+        },
+      ]);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, []);
   const handleLogin = async () => {
     setIsLoading(true);
 
@@ -31,7 +64,7 @@ export default function LoginPage() {
       } else {
         console.error("User data not found in the response.");
       }
-      router.push('/profile');
+      router.replace('/profile');
     }
     catch (error: any) {
       if (error.response) {
@@ -72,25 +105,31 @@ export default function LoginPage() {
         <Image style={styles.imageLogo} source={icon} />
         <Text style={styles.text}>Delivery Monitoring System</Text>
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#aaa"
-        value={values.username}
-        onChangeText={(text) => setValues({ ...values, username: text })}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          placeholderTextColor="#aaa"
+          value={values.username}
+          onChangeText={(text) => setValues({ ...values, username: text })}
 
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#aaa"
-        secureTextEntry
-        value={values.password}
-        onChangeText={(text) => setValues({ ...values, password: text })}
-      />
+        />
+        <Ionicons color='hsl(0,0%,70%)' style={styles.icon} name="person-outline" size={18} />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#aaa"
+          secureTextEntry
+          value={values.password}
+          onChangeText={(text) => setValues({ ...values, password: text })}
+        />
+        <Ionicons color='hsl(0,0%,70%)' style={styles.icon2} name="key-outline" size={18} />
+
+      </View>
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>
           {isLoading ? 'Logging in...' : 'Log in'}
+          {/* <Ionicons color='hsl(0,0%,70%)' name="log-in-outline" size={18} /> */}
         </Text>
       </TouchableOpacity>
       {/* <Link href="/register" style={styles.link}>Register</Link> */}
@@ -138,6 +177,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 20,
     color: '#fff',
+  },
+  inputContainer: {
+    justifyContent: 'center',
+    width: '100%',
+  },
+  icon: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+  },
+  icon2: {
+    position: 'absolute',
+    right: 10,
+    bottom: 30,
   },
   button: {
     backgroundColor: 'green',

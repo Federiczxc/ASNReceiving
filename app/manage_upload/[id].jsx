@@ -6,6 +6,7 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import api from '../../api';
+import { Ionicons } from '@expo/vector-icons';
 
 import Carousel from 'react-native-reanimated-carousel';
 import { LogBox } from 'react-native';
@@ -18,11 +19,17 @@ export default function OutslipUpload() {
         trip_ticket_detail_id: null,
         trans_name: null,
         remarks: null,
-        branch_charges: null,
-        document_amount: null
+        branch_id: null,
+        branch_name: '',
+        ref_trans_date: '',
+        ref_trans_id: null,
+        items: []
+    });
+    const [tripBranch, setTripBranch] = useState({
+        branch_name: '',
+        branch_id: '',
     });
     const [uploadOutslip, setUploadOutslip] = useState([]);
-    LogBox.ignoreLogs(['findDOMNode is deprecated']);
 
     const [isLoading, setIsLoading] = useState(true);
     const [ocrText, setOcrText] = useState('');
@@ -51,6 +58,7 @@ export default function OutslipUpload() {
                 const uploadData = response.data.upload_data;
                 setUploadOutslip(uploadData);
                 setOutslipDetail(response.data.trip_details[0]);
+                setTripBranch(response.data.branches[0]);
                 setImages(uploadData.map(item => item.upload_files));
                 setOcrResults(uploadData.map(item => item.upload_text));
                 setRemarks(uploadData.map(item => item.upload_remarks));
@@ -62,6 +70,11 @@ export default function OutslipUpload() {
                 setIsLoading(false);
             } catch (error) {
                 console.error(error);
+                if (error.response?.status === 401) {
+                    Alert.alert('Error', 'Your login session has expired. Please log in');
+                    router.replace('/');
+                    return;
+                }
             }
         };
         fetchData();
@@ -279,20 +292,60 @@ export default function OutslipUpload() {
                 <View style={styles.ticketContainer}>
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                         <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.trip_ticket_detail_id}</Text>
+                            <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_id}</Text>
+                                                            <Text style={styles.tripId}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
+                                                            <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
                         </View>
+                        <Ionicons
+                            name={isExpanded ? "chevron-down" : "chevron-forward"}
+                            size={20}
+                            color="#666"
+                            style={{alignSelf: 'center'}}
+                        />
                         {isExpanded && (
                             <>
                                 <View style={styles.ticketBody}>
-                                    <View style={styles.infoSection}>
-                                        <Text style={styles.label}>Branch Charges:</Text>
-                                        <Text style={styles.value}>{outslipDetail.branch_charges}</Text>
-                                    </View>
-                                    <View style={styles.infoSection}>
-                                        <Text style={styles.label}>Document Amount:</Text>
-                                        <Text style={styles.value}>{outslipDetail.document_amount}</Text>
+                                    <View style={styles.tableHeader}>
+                                        <View style={{ width: '30%', paddingLeft: 3 }}>
+                                            <Text style={styles.headerLabel}>Barcode</Text>
+                                        </View>
+                                        <View style={{ width: '45%' }}>
+
+                                            <Text style={styles.headerLabel}>Description</Text>
+                                        </View>
+                                        <View style={{ width: '15%' }}>
+
+                                            <Text style={styles.headerLabel}>QTY</Text>
+                                        </View>
+                                        <View style={{ width: '10%' }}>
+
+                                            <Text style={styles.headerLabel}>UOM</Text>
+                                        </View>
                                     </View>
                                 </View>
+                                {outslipDetail.items.map((item) => (
+                                    <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                        <View style={styles.tableBody}>
+                                            <View style={styles.bodyColumn1}>
+                                                <Text style={styles.bodyLabel}>{item.barcode}</Text>
+                                            </View>
+                                            <View style={styles.bodyColumn2}>
+
+                                                <Text style={styles.bodyLabel}>{item.item_description}</Text>
+                                            </View>
+                                            <View style={styles.bodyColumn3}>
+
+                                                <Text style={styles.bodyLabel}>{item.item_qty}</Text>
+                                            </View>
+                                            <View style={styles.bodyColumn4}>
+
+                                                <Text style={styles.bodyLabel}>{item.uom_code}</Text>
+                                            </View>
+                                        </View>
+
+
+                                    </View>
+                                ))}
                                 <View style={styles.ticketFooter}>
                                     <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
                                 </View>
@@ -597,4 +650,32 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#000',
     },
+    tableHeader: {
+        flexDirection: 'row',
+
+    },
+    headerLabel: {
+        fontWeight: 'bold',
+    },
+    tableBody: {
+        flexDirection: 'row',
+        padding: 5,
+        borderWidth: 0.5,
+    },
+    bodyLabel: {
+        fontSize: 10
+    },
+    bodyColumn1: {
+        width: '30%',
+    },
+    bodyColumn2: {
+        width: '45%',
+    },
+    bodyColumn3: {
+        width: '10%',
+    },
+    bodyColumn4: {
+        width: '10%',
+        marginLeft: 20
+    }
 });

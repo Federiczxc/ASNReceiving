@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Alert, LogBox, TextInput, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
@@ -9,7 +10,15 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform } from 'react-native';
 import * as Location from 'expo-location'
-
+interface Item {
+    item_id: number;
+    outslip_to_id: number;
+    item_qty: number;
+    item_description: string;
+    barcode: string;
+    remarks: string;
+    uom_code: string;
+}
 interface TripDetails {
     trip_ticket_id: number;
     trip_ticket_detail_id: number;
@@ -18,20 +27,23 @@ interface TripDetails {
     branch_charges: number;
     document_amount: number;
     ref_trans_date: Date;
+    ref_trans_id: number;
     branch_name: string;
+    barcode: string;
+    item_description: string;
+    item_qty: number;
+    items: Item[];
 }
-
 interface BranchDetails {
     branch_id: number;
     branch_name: string;
 }
-
 export default function TripListDetails() {
-
     LogBox.ignoreAllLogs()
     const [TripDetails, setTripDetails] = useState<TripDetails[]>([]);
     const [BranchDetails, setBranchDetails] = useState<BranchDetails | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [isExpanded, setIsExpanded] = useState<Record<number, boolean>>({});
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -67,26 +79,29 @@ export default function TripListDetails() {
             return true;
         }
     };
+    const toggleItemExpansion = (itemId: number) => {
+        setIsExpanded(prev => ({
+            ...prev,
+            [itemId]: !prev[itemId]
+        }));
+    }
     const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert('Error', 'Location permission denied');
             return null;
         }
-
         try {
             const location = await Location.getCurrentPositionAsync({});
             const { latitude, longitude } = location.coords;
             console.log('Latitude', latitude);
             console.log('Longitude', longitude);
-
             return { latitude, longitude };
         } catch (error) {
             console.error('Error getting location:', error);
             Alert.alert('Error', 'Failed to get location');
             return null;
         }
-
     };
     const sendLocationToBackend = async (latitude: any, longitude: any) => {
         try {
@@ -110,7 +125,7 @@ export default function TripListDetails() {
                     params: { trip_ticket_id, branch_id }
                 });
                 setTripDetails(response.data.tripdetails);
-                console.log(response.data.tripdetails);
+                console.log("tite", response.data.tripdetails);
                 setBranchDetails(response.data.branches[0]);
                 setLoading(false);
             } catch (error) {
@@ -118,7 +133,6 @@ export default function TripListDetails() {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, []);
     const filteredTrips = TripDetails.filter((trip) =>
@@ -127,13 +141,11 @@ export default function TripListDetails() {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredTrips.slice(indexOfFirstItem, indexOfLastItem);
-
     const handleNextPage = () => {
         if (currentPage < Math.ceil(filteredTrips.length / itemsPerPage)) {
             setCurrentPage((prevPage) => prevPage + 1);
         }
     };
-
     const handlePrevPage = () => {
         if (currentPage > 1) {
             setCurrentPage(prevPage => prevPage - 1);
@@ -142,7 +154,6 @@ export default function TripListDetails() {
     const timeIn = async () => {
         try {
             setLoading(true)
-
             const userData = await AsyncStorage.getItem('user_data');
             const userId = userData ? JSON.parse(userData).user_id : null;
             // Get the user's current location
@@ -153,15 +164,13 @@ export default function TripListDetails() {
             }
             const { latitude, longitude } = location;
             console.log("TUITEUTEITIE", location, latitude, longitude);
-
+            const accessToken = await AsyncStorage.getItem('access_token');
             // Get additional location data (e.g., address) using LocationIQ or another service
-
             const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
             console.log("titest2 ", currentDate);
             console.log("titesmet2 ", currentTime);
             console.log("tripticketinin", trip_ticket_id, id);
-
             const clockInData = {
                 latitude_in: latitude,
                 longitude_in: longitude,
@@ -169,63 +178,30 @@ export default function TripListDetails() {
                 trip_ticket_id: trip_ticket_id,
                 branch_id: id,
             };
-
-            const postResponse = await api.post("/clock-in/", clockInData);
+            const postResponse = await api.post("/clock-in/", clockInData, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
             console.log("clockindata", postResponse.data);
             Alert.alert("Attendance!", "You have successfully clocked in today");
-            setLoading(false)
-
         } catch (error: any) {
-            if (error.response && error.response.data.error === "You have already clocked in today.") {
-                Alert.alert("Error", "You have already clocked in today.");
-            } else {
-                console.error("Error fetching location or clocking in:", error.response ? error.response.data : error.message);
-                Alert.alert("Error", JSON.stringify(error.response ? error.response.data.error : error.message));
+
+            if (error.response.status == 401) {
+                Alert.alert('Error', 'Your login session has expired. Please log in');
+                router.replace('/');
+                return;
             }
+            else {
+                console.error("Error fetching location or clocking out:", error.response.data);
+                Alert.alert("Error", JSON.stringify(error.response.data.error || error.response.data.detail));
+            }
+
         }
         finally {
             setLoading(false)
         }
     };
-    /* const timeIn = async () => {
-        try {
-            const userData = await AsyncStorage.getItem('user_data');
-            const userId = userData ? JSON.parse(userData).user_id : null;
-            const response = await api.get("/retrieve-location/");
-            const locationData = response.data;
-            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
-            console.log("titest2 ", currentDate);
-            console.log("titesmet2 ", currentTime);
-            console.log("tripticketinin", trip_ticket_id, id);
-            const userIp = locationData.ip;
-            const latitude = locationData.latitude;
-            const longitude = locationData.longitude;
-            const fulladdress = locationData.fulladdress;
-            console.log("locloc", userIp, latitude, longitude, fulladdress, currentDate);
-            const clockInData = {
-                ip_address_in: userIp,
-                location_in: fulladdress,
-                latitude_in: latitude,
-                longitude_in: longitude,
-                created_by: userId,
-                trip_ticket_id: trip_ticket_id,
-                branch_id: id
-            }
-            const postResponse = await api.post("/clock-in/", clockInData);
-
-            console.log("clockindata", postResponse.data)
-            Alert.alert("CLOCKEDIN", "YOUCLOCKED");
-        } catch (error: any) {
-            if (error.response && error.response.data.error === "You have already clocked in today.") {
-                Alert.alert("Error", "You have already clocked in today.");
-            } else {
-                console.error("Error fetching location or clocking in:", error.response.data);
-
-                Alert.alert("Error", JSON.stringify(error.response.data));
-            }
-        }
-    }; */
     const timeOut = async () => {
         try {
             setLoading(true)
@@ -239,17 +215,13 @@ export default function TripListDetails() {
             }
             const { latitude, longitude } = location;
             console.log("TUITEUTEITIE", location, latitude, longitude);
-
             // Get additional location data (e.g., address) using LocationIQ or another service
-
             const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
             console.log("titest2 ", currentDate);
             console.log("titesmet2 ", currentTime);
             console.log("tripticketinin", trip_ticket_id, id);
-
             console.log("locloc", latitude, longitude, currentDate);
-
             const clockInData = {
                 latitude_out: latitude,
                 longitude_out: longitude,
@@ -261,19 +233,20 @@ export default function TripListDetails() {
                     'Authorization': `Bearer ${accessToken}`,
                 },
             });
-
             console.log("clockindata", postResponse.data)
             Alert.alert("Attendance!", "You have successfully time out!");
-
         } catch (error: any) {
-            if (error.response && error.response.data.error === "You have already clocked out today.") {
-                Alert.alert("Error", "You have already clocked out today.");
-            } else {
+            if (error.response.status == 401) {
+                Alert.alert('Error', 'Your login session has expired. Please log in');
+                router.replace('/');
+                return;
+            }
+            else {
                 console.error("Error fetching location or clocking out:", error.response.data);
-
                 Alert.alert("Error", JSON.stringify(error.response.data.error || error.response.data.detail));
             }
         }
+
         finally {
             setLoading(false)
         }
@@ -295,7 +268,6 @@ export default function TripListDetails() {
             const longitude = locationData.longitude;
             const fulladdress = locationData.fulladdress;
             console.log("locloc", userIp, latitude, longitude, fulladdress, currentDate);
-
             const clockInData = {
                 ip_address_out: userIp,
                 location_out: fulladdress,
@@ -310,7 +282,6 @@ export default function TripListDetails() {
                     'Authorization': `Bearer ${accessToken}`,
                 },
             });
-
             console.log("clockindata", postResponse.data)
             Alert.alert("CLOCKEDOUT", "YOUCLOCKED");
         } catch (error: any) {
@@ -318,12 +289,10 @@ export default function TripListDetails() {
                 Alert.alert("Error", "You have already clocked out today.");
             } else {
                 console.error("Error fetching location or clocking out:", error.response.data);
-
                 Alert.alert("Error", JSON.stringify(error.response.data));
             }
         }
     }; */
-
     if (loading) {
         return (
             <View style={styles.container}>
@@ -335,7 +304,6 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
-
                 <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
                 <View style={styles.clockContainer}>
                     <TouchableOpacity onPress={timeIn}>
@@ -344,7 +312,6 @@ export default function TripListDetails() {
                                 Time in
                             </Text>
                             <Ionicons style={styles.attendanceIcon} name={"enter-outline"} size={19} />
-
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={timeOut}>
@@ -357,7 +324,6 @@ export default function TripListDetails() {
                     </TouchableOpacity>
                 </View>
             </View>
-
             <FlatList
                 data={currentItems}
                 renderItem={({ item }) => (
@@ -373,21 +339,76 @@ export default function TripListDetails() {
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>{item.trans_name} #{item.trip_ticket_detail_id}</Text>
+                                <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_id}</Text>
+                                <Text style={styles.tripId2}>Trip Ticket Detail #{item.trip_ticket_detail_id}</Text>
                                 <Text style={styles.footerText}>{format(new Date(item.ref_trans_date), 'MMM dd, yyyy')}</Text>
                             </View>
-                            <View style={styles.ticketBody}>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Branch Charges:</Text>
-                                    <Text style={styles.value}>{item.branch_charges}</Text>
-                                </View>
-                                <View style={styles.infoSection}>
-                                    <Text style={styles.label}>Document Amount:</Text>
-                                    <Text style={styles.value}>{item.document_amount}</Text>
-                                </View>
-                            </View>
+                            {item.items && item.items.length > 0 && (
+                                <View style={styles.ticketBody}>
+                                    <View style={styles.table}>
+                                        <View style={styles.tableHeader}>
+                                            <View style={{ width: '30%', paddingLeft: 3 }}>
+                                                <Text style={styles.headerLabel}>Barcode</Text>
+                                            </View>
+                                            <View style={{ width: '45%' }}>
+                                                <Text style={styles.headerLabel}>Description</Text>
+                                            </View>
+                                            <View style={{ width: '15%' }}>
+                                                <Text style={styles.headerLabel}>QTY</Text>
+                                            </View>
+                                            <View style={{ width: '10%' }}>
+                                                <Text style={styles.headerLabel}>UOM</Text>
+                                            </View>
+                                        </View>
+                                        {item.items.map((product) => (
+                                            <View key={product.item_id}>
+                                                <View style={styles.tableBody}>
+                                                    <View style={styles.bodyColumn1}>
+                                                        <Text style={styles.bodyLabel}>{product.barcode}</Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn2}>
+                                                        <Text style={styles.bodyLabel}>{product.item_description}</Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn3}>
+                                                        <Text style={styles.bodyLabel}>{product.item_qty}</Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn4}>
+                                                        <Text style={styles.bodyLabel}>{product.uom_code}</Text>
+                                                    </View>
+                                                </View>
+                                                {/* <TouchableOpacity onPress={() => toggleItemExpansion(product.item_id)} activeOpacity={0.7}>
+                                                <View style={styles.infoSection}>
+                                                    <Text style={styles.label}>Item Name: </Text>
+                                                    <Text style={styles.value}>{product.item_description}</Text>
+                                                </View>
+                                                <Ionicons
+                                                    name={isExpanded[product.item_id] ? "chevron-down" : "chevron-forward"}
+                                                    size={20}
+                                                    color="#666"
+                                                />
+                                                {isExpanded[product.item_id] && (
+                                                    <View style={styles.expandedItems}>
+                                                        <View style={styles.infoSection}>
+                                                            <Text style={styles.expandedLabel}>Quantity:</Text>
+                                                            <Text style={styles.expandedValue}>{product.item_qty}</Text>
+                                                        </View>
+                                                        <View style={styles.infoSection}>
+                                                            <Text style={styles.expandedLabel}>Barcode:</Text>
+                                                            <Text style={styles.expandedValue}>{product.barcode}</Text>
+                                                        </View>
+                                                        <View style={styles.expandedFooter}>
+                                                            <Text style={styles.expandedRemarks}>Item Remarks: {product.remarks}</Text>
+                                                        </View>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity> */}
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View >
+                            )}
                             <View style={styles.ticketFooter}>
-                                <Text style={styles.footerText} >Remarks: {item.remarks}</Text>
+                                <Text style={styles.footerText}>Remarks: {item.remarks}</Text>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -400,7 +421,6 @@ export default function TripListDetails() {
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     attendanceButton: {
         borderWidth: 1.5,
@@ -419,7 +439,6 @@ const styles = StyleSheet.create({
         borderColor: 'red',
         marginBottom: 5,
         flexDirection: 'row',
-
     },
     attendanceIcon: {
         marginLeft: 5,
@@ -474,14 +493,19 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
     },
-    ticketBody: {  
+    tripId2: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+    },
+    ticketBody: {
     },
     infoSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         borderWidth: 0.5,
-        padding: 10
-
+        padding: 10,
     },
     label: {
         fontSize: 16,
@@ -489,11 +513,33 @@ const styles = StyleSheet.create({
         color: '#555',
     },
     value: {
-        fontSize: 16,
+        fontSize: 8,
         color: '#000',
     },
     ticketFooter: {
         backgroundColor: '#4caf50',
+        padding: 10,
+    },
+    expandedItems: {
+        backgroundColor: '#ffd33d'
+    },
+    expandedLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#000',
+    },
+    expandedValue: {
+        fontSize: 14,
+        color: '#000',
+    },
+    expandedRemarks: {
+        fontSize: 14,
+        color: '#000',
+        fontWeight: 500,
+        textAlign: 'center',
+    },
+    expandedFooter: {
+        backgroundColor: '#ffd33d',
         padding: 10,
     },
     footerText: {
@@ -508,4 +554,33 @@ const styles = StyleSheet.create({
         width: '100%',
         marginTop: 20,
     },
+    table: {
+    },
+    tableHeader: {
+        flexDirection: 'row',
+    },
+    headerLabel: {
+        fontWeight: 'bold',
+    },
+    tableBody: {
+        flexDirection: 'row',
+        padding: 5,
+        borderWidth: 0.5,
+    },
+    bodyLabel: {
+        fontSize: 10
+    },
+    bodyColumn1: {
+        width: '30%',
+    },
+    bodyColumn2: {
+        width: '45%',
+    },
+    bodyColumn3: {
+        width: '10%',
+    },
+    bodyColumn4: {
+        width: '10%',
+        marginLeft: 20
+    }
 });

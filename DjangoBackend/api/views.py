@@ -19,8 +19,9 @@ from django.http import JsonResponse
 import requests
 from datetime import date,datetime
 from django.forms.models import model_to_dict
+from collections import defaultdict
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+#pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 logger = logging.getLogger(__name__)
 
 class LoginView(APIView):
@@ -29,7 +30,7 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            print(serializer.errors)  # ✅ This will show the exact problem
+            print(serializer.errors)  
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.validated_data['user']
@@ -126,35 +127,85 @@ class TripBranchView(APIView):
         ]
         return Response(response_data)
     
+
 class TripDetailView(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        trip_ticket_id = request.query_params.get('trip_ticket_id')  
-        branch_id = request.query_params.get('branch_id') 
-        if trip_ticket_id:
-            try:
-                tripdetail_data = TripDetailsModel.objects.using('default').filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
+        trip_ticket_id = request.query_params.get('trip_ticket_id')
+        branch_id = request.query_params.get('branch_id')
+
+        if not trip_ticket_id:
+            return Response({"error": "trip_ticket_id is required."}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        td.*,
+                        i.item_id, i.item_description, i.barcode, i.uom_id,
+                        u.uom_code,
+                        oi.item_qty, oi.remarks
+                    FROM scm_tr_trip_ticket_detail td
+                    JOIN scm_tr_outslip_to_item oi ON td.ref_trans_id = oi.outslip_to_id
+                    JOIN scm_mf_item i ON oi.item_id = i.item_id
+                    LEFT JOIN scm_mf_uom u ON i.uom_id = u.uom_id
+                    WHERE td.trip_ticket_id = %s AND td.branch_id = %s
+                """, [trip_ticket_id, branch_id])
                 
-                if not tripdetail_data.exists():
-                    return Response({"error": "Trip ticket not found."}, status=404)
-            except ValueError:
-                return Response({"error": "Invalid ID format."}, status=400)
-        else:
-            return Response({"error": "ID is required."}, status=400)
-        
-        tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
-        tripdetails = tripdetail_serializer.data
-        branch_ids = list(set([detail['branch_id'] for detail in tripdetails])) 
-        branch_data = TripBranchModel.objects.using('default').filter(branch_id__in=branch_ids) # match
-        branch_serializer = TripBranchSerializer(branch_data, many=True)
-        response_data = {
-            'tripdetails': tripdetail_serializer.data,
-            'branches': branch_serializer.data
-        }
+                columns = [col[0] for col in cursor.description]
+                raw_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-        return Response(response_data)
+            if not raw_data:
+                return Response({"error": "Trip ticket not found."}, status=404)
 
+            trips_map = {}
+            branches = set()
+            
+            for row in raw_data:
+                trip_id = row['trip_ticket_detail_id']
+                
+                if trip_id not in trips_map:
+                    trips_map[trip_id] = {
+                        'trip_ticket_detail_id': trip_id,
+                        'trip_ticket_id': row['trip_ticket_id'],
+                        'branch_id': row['branch_id'],
+                        'ref_trans_id': row['ref_trans_id'],
+                        'ref_trans_date': row['ref_trans_date'],
+                        'trans_name': row['trans_name'],
+                        'remarks': row['remarks'],
+                        'items': [],
+                        'branch_name': row.get('branch_name'),
+                    }
+                    branches.add(row['branch_id'])
+                
+                # Only add unique items per trip
+                existing_items = {i['item_id'] for i in trips_map[trip_id]['items']}
+                if row['item_id'] not in existing_items:
+                    trips_map[trip_id]['items'].append({
+                        'item_id': row['item_id'],
+                        'item_qty': str(row['item_qty']),
+                        'remarks': row['remarks'],
+                        'item_description': row['item_description'],
+                        'barcode': row['barcode'],
+                        'uom_id': row['uom_id'],
+                        'uom_code': row['uom_code'],
+                       
+                    })
+
+            # Get branch details
+            branch_data = TripBranchModel.objects.using('default').filter(
+                branch_id__in=branches
+            )
+            branch_serializer = TripBranchSerializer(branch_data, many=True)
+            logger.warning(f'ada', list(trips_map.values()))
+            return Response({
+                'tripdetails': list(trips_map.values()),
+                'branches': branch_serializer.data
+            })
+
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=400)
 class ManageAttendanceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -210,6 +261,7 @@ class ManageTripDetailView(APIView):
                 "trans_name": trip.trans_name,
                 "branch_name": trip.branch_name,
                 "ref_trans_date": trip.ref_trans_date,
+                "ref_trans_id": trip.ref_trans_id,
             })
         logger.warning(f"booorat, {list(grouped_trips.values())}")
         trip_serializer = TripDetailsSerializer(filtered_trip_data, many=True)
@@ -231,54 +283,145 @@ class ManageUploadedPictures(APIView):
         if trip_ticket_detail_id:
             try:
                 upload_data = OutslipImagesModel.objects.using('default').filter(trip_ticket_detail_id=trip_ticket_detail_id, created_by = user.user_id)
-                tripdetails_data = TripDetailsModel.objects.using('default').filter(trip_ticket_detail_id=trip_ticket_detail_id)
                 if not upload_data.exists():
                     return Response({"error": "Trip ticket Detail not found."}, status=404)
             except ValueError:
                 return Response ({"error": "Invalid Format"}, status=404)
-        else:
-            return Response({"Error": "ID is required."}, status=400)
-        
-        upload_data_serializer = OutslipImagesSerializer(upload_data, many=True)
-        tripdetails_data_serializer = TripDetailsSerializer(tripdetails_data, many=True)
-        uploadDetails = upload_data_serializer.data
-        logger.warning(f"tite: {uploadDetails}" )
-        response_data = {
-            'upload_data':uploadDetails,
-            'trip_details':tripdetails_data_serializer.data
-        }
-        return Response(response_data)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        td.*,
+                        i.item_id, i.item_description, i.barcode, i.uom_id,
+                        u.uom_code,
+                        oi.item_qty, oi.remarks
+                    FROM scm_tr_trip_ticket_detail td
+                    JOIN scm_tr_outslip_to_item oi ON td.ref_trans_id = oi.outslip_to_id
+                    JOIN scm_mf_item i ON oi.item_id = i.item_id
+                    LEFT JOIN scm_mf_uom u ON i.uom_id = u.uom_id
+                    WHERE td.trip_ticket_detail_id = %s
+                """, [trip_ticket_detail_id])    
     
+                columns = [col[0] for col in cursor.description]
+                raw_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            if not raw_data:
+                return Response({"error": "Trip ticket not found."}, status=404)
+            
+            trips_map = {}
+            branches = set()
+
+            for row in raw_data:
+                trip_id = row['trip_ticket_detail_id']
+                
+                if trip_id not in trips_map:
+                    trips_map[trip_id] = {
+                        'trip_ticket_detail_id': trip_id,
+                        'trip_ticket_id': row['trip_ticket_id'],
+                        'branch_id': row['branch_id'],
+                        'ref_trans_id': row['ref_trans_id'],
+                        'ref_trans_date': row['ref_trans_date'],
+                        'trans_name': row['trans_name'],
+                        'remarks': row['remarks'],
+                        'items': [],
+                        'branch_name': row.get('branch_name'),
+                }
+                branches.add(row['branch_id'])
+                
+                existing_items = {i['item_id'] for i in trips_map[trip_id]['items']}
+                if row['item_id'] not in existing_items:
+                    trips_map[trip_id]['items'].append({
+                        'item_id': row['item_id'],
+                        'item_qty': str(row['item_qty']),
+                        'remarks': row['remarks'],
+                        'item_description': row['item_description'],
+                        'barcode': row ['barcode'],
+                        'uom_id': row['uom_id'],
+                        'uom_code': row['uom_code'],
+                    })
+            branch_data = TripBranchModel.objects.using('default').filter(branch_id__in=branches) # match
+            branch_serializer = TripBranchSerializer(branch_data, many=True)
+            upload_data_serializer = OutslipImagesSerializer(upload_data, many=True)
+            uploadDetails = upload_data_serializer.data
+            logger.warning(f"tite: {uploadDetails}" )
+            return Response({
+                'upload_data':uploadDetails,
+                'trip_details': list(trips_map.values()),
+                'branches': branch_serializer.data,
+            })
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=400)
 
 class OutslipDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+
     
     def get(self, request):
         
         trip_ticket_detail_id = request.query_params.get('trip_ticket_detail_id')  
-        if trip_ticket_detail_id:
-            try:
-                tripdetail_data = TripDetailsModel.objects.using('default').filter(trip_ticket_detail_id=trip_ticket_detail_id)
-                
-                if not tripdetail_data.exists():
-                    return Response({"error": "Trip ticket not found."}, status=404)
-            except ValueError:
-                return Response({"error": "Invalid ID format."}, status=400)
-        else:
-            return Response({"error": "ID is required."}, status=400)
+        if not trip_ticket_detail_id:
+            return Response({'error': 'Trip Ticket Detail ID is required. '}, status=400)
         
-        tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
-        tripdetails = tripdetail_serializer.data
-        branch_ids = list(set([detail['branch_id'] for detail in tripdetails])) 
-        branch_data = TripBranchModel.objects.using('default').filter(branch_id__in=branch_ids) # match
-        branch_serializer = TripBranchSerializer(branch_data, many=True)
-        response_data = {
-            'tripdetails': tripdetail_serializer.data,
-            'branches': branch_serializer.data
-        }
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        td.*,
+                        i.item_id, i.item_description, i.barcode, i.uom_id,
+                        u.uom_code,
+                        oi.item_qty, oi.remarks
+                    FROM scm_tr_trip_ticket_detail td
+                    JOIN scm_tr_outslip_to_item oi ON td.ref_trans_id = oi.outslip_to_id
+                    JOIN scm_mf_item i ON oi.item_id = i.item_id
+                    LEFT JOIN scm_mf_uom u ON i.uom_id = u.uom_id
+                    WHERE td.trip_ticket_detail_id = %s
+                """, [trip_ticket_detail_id])    
+    
+                columns = [col[0] for col in cursor.description]
+                raw_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            if not raw_data:
+                return Response({"error": "Trip ticket not found."}, status=404)
+            
+            trips_map = {}
+            branches = set()
 
-        return Response(response_data)
+            for row in raw_data:
+                trip_id = row['trip_ticket_detail_id']
 
+                if trip_id not in trips_map:
+                    trips_map[trip_id] = {
+                        'trip_ticket_detail_id': trip_id,
+                        'trip_ticket_id': row['trip_ticket_id'],
+                        'branch_id': row['branch_id'],
+                        'ref_trans_id': row['ref_trans_id'],
+                        'ref_trans_date': row['ref_trans_date'],
+                        'trans_name': row['trans_name'],
+                        'remarks': row['remarks'],
+                        'items': [],
+                        'branch_name': row.get('branch_name'),
+                }
+                branches.add(row['branch_id'])
+                
+                existing_items = {i['item_id'] for i in trips_map[trip_id]['items']}
+                if row['item_id'] not in existing_items:
+                    trips_map[trip_id]['items'].append({
+                        'item_id': row['item_id'],
+                        'item_qty': str(row['item_qty']),
+                        'remarks': row['remarks'],
+                        'item_description': row['item_description'],
+                        'barcode': row ['barcode'],
+                        'uom_id': row['uom_id'],
+                        'uom_code': row['uom_code'],
+                    })
+            branch_data = TripBranchModel.objects.using('default').filter(branch_id__in=branches) # match
+            branch_serializer = TripBranchSerializer(branch_data, many=True)
+            logger.warning(f'ada', list(trips_map.values()))
+            return Response({
+                'tripdetails': list(trips_map.values()),
+                'branches': branch_serializer.data
+            })
+
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=400)
 
 
 
@@ -304,6 +447,7 @@ class UploadOutslipView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
+        request.user
         upload_images = request.FILES.getlist('image',)    #should be same name from frointend
         upload_remarks = request.data.getlist('upload_remarks', '')
         upload_text = request.data.getlist('upload_text', '')
@@ -340,7 +484,7 @@ class UploadOutslipView(APIView):
         
         if has_upload:
             return Response(
-                {"Error": f"You have already uploaded, you can't upload anymore"},
+                {f"You have already uploaded an outslip, you can't upload anymore. Please check your profile to view your uploaded outslips."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         if has_clock_out:
@@ -529,7 +673,7 @@ class RetrieveLocationView(APIView):
         return response.json()
     
 class ClockInAttendance(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     def post (self, request):
         data = request.data
         user_id = data['created_by']
@@ -633,7 +777,7 @@ class ClockOutAttendance(APIView):
                     branch_id=detail.branch_id,
                 ).first():
                     return Response(
-                        {"error": f"Upload missing for outslip number: {detail.trip_ticket_detail_id}."},
+                        {"error": f"Upload missing for trip ticket detail #: {detail.trip_ticket_detail_id}."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
             location_data = self.reverse_geocode(latitude, longitude)

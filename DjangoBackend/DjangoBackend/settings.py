@@ -25,10 +25,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 SECRET_KEY = 'django-insecure-w7qolrc)hfzt-l80rvs-p*mzknxh^soeuy*e^=2@9n2(-1tj=q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "192.168.126.56", "mis-federick"]
-
+#ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "192.168.126.56", "mis-federick"]
+ALLOWED_HOSTS = ['*']
 BASE_URL = "http://176.16.1.126:8000/api"
 # Application definition
 
@@ -111,7 +111,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'DjangoBackend.wsgi.application'
-FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024 * 1024
 GEOIP_PATH = os.path.join(BASE_DIR, 'outslips')
 GEOIP_DATABASE = 'GeoLite2-City.mmdb'
 # Database

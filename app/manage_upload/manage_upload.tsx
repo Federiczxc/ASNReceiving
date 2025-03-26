@@ -13,7 +13,7 @@ interface TripUploads {
     trip_ticket_detail_id: number;
     trans_name: string;
     ref_trans_date: Date;
-
+    ref_trans_id: number;
 }
 
 export default function TripList() {
@@ -58,6 +58,11 @@ export default function TripList() {
                 if (error.response?.status === 404) {
                     setTripData([]);
 
+                }
+                if (error.response?.status === 401) {
+                    Alert.alert('Error', 'Your login session has expired. Please log in');
+                    router.replace('/');
+                    return;
                 }
             }
             finally {
@@ -141,6 +146,18 @@ export default function TripList() {
 
                                 {Array.isArray(item.trip_ticket_detail_id) && (
                                     <View style={styles.ticketBody}>
+                                        <View style={styles.tableHeader}>
+                                            <View style={{ width: '25%', paddingLeft: 3 }}>
+                                                <Text style={styles.headerLabel}>Outslip #</Text>
+                                            </View>
+                                            <View style={{ width: '45%' }}>
+                                                <Text style={styles.headerLabel}>Trip Ticket Detail #</Text>
+                                            </View>
+                                            <View style={{ width: '25%' }}>
+
+                                                <Text style={styles.headerLabel}>Branch</Text>
+                                            </View>
+                                        </View>
                                         {item.trip_ticket_detail_id.map((detail, index) => (
                                             <TouchableOpacity key={index} onPress={() =>
                                                 router.push({
@@ -148,11 +165,19 @@ export default function TripList() {
                                                     params: { id: detail.trip_ticket_detail_id },
                                                 })
                                             }>
-                                                <View style={styles.infoSection}>
-                                                    <Text style={styles.label}>Outslip ID:{detail.trip_ticket_detail_id}
-                                                    </Text>
-                                                    <Text style={styles.value}>{detail.branch_name} </Text>
 
+                                                <View style={styles.tableBody}>
+                                                    <View style={styles.bodyColumn1}>
+                                                        <Text style={styles.bodyLabel}>{detail.trip_ticket_detail_id}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn2}>
+                                                        <Text style={styles.bodyLabel}>{detail.ref_trans_id}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.bodyColumn3}>
+                                                        <Text style={styles.bodyLabel}>{detail.branch_name} </Text>
+                                                    </View>
                                                 </View>
                                             </TouchableOpacity>
                                         ))}
@@ -262,5 +287,32 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         width: '100%',
         marginTop: 20,
+    },
+    tableHeader: {
+        flexDirection: 'row',
+
+    },
+    headerLabel: {
+        fontWeight: 'bold',
+    },
+    tableBody: {
+        flexDirection: 'row',
+        padding: 10,
+        borderWidth: 0.5,
+    },
+    bodyLabel: {
+        fontSize: 14
+    },
+    bodyColumn1: {
+        width: '25%',
+    },
+    bodyColumn2: {
+        width: '35%',
+        alignItems: 'center'
+    },
+    bodyColumn3: {
+        width: '40%',
+        alignItems: 'center'
+
     },
 });

@@ -57,6 +57,7 @@ class TripDetailsModel(models.Model):
     branch_name = models.CharField(max_length=255)
     trip_ticket_detail_id = models.BigAutoField(primary_key=True)
     ref_trans_date = models.DateTimeField()
+    ref_trans_id = models.BigIntegerField()
     full_address = models.TextField()
     trans_name = models.CharField(max_length=255)
     remarks = models.TextField()
@@ -76,6 +77,36 @@ class TripBranchModel(models.Model):
         db_table = 'fin_mf_branch'
         managed = False
         
+class OutslipItemQtyModel(models.Model):
+    server_id = models.BigIntegerField(default=1)
+    outslip_to_id = models.BigIntegerField() # ref_trans_id in scm_tr_trip_ticket_detail
+    outslip_to_item_id = models.BigIntegerField(primary_key=True) #outslip ID = scm_Tr_to
+    item_id = models.BigIntegerField(null=True, blank=True)
+    item_qty = models.DecimalField(max_digits=12 ,decimal_places=4) 
+    remarks = models.TextField(null=True, blank=True)
+    class Meta:
+        db_table ='scm_tr_outslip_to_item' 
+        managed = False
+        
+class ItemMFModel(models.Model):
+    item_id = models.BigAutoField(primary_key=True)
+    barcode = models.CharField(max_length=255, null=True, blank=True)
+    item_description = models.CharField(max_length=450, null=True, blank=True)
+    uom_id = models.BigIntegerField()
+    
+    class Meta:
+        db_table = 'scm_mf_item'
+        managed = False
+
+
+class UOMMFModel(models.Model):
+    uom_id = models.BigIntegerField(primary_key=True)
+    uom_code = models.CharField(max_length=30)
+    
+    class Meta:
+        db_table = 'scm_mf_uom'
+        managed = False
+
 class OutslipImagesModel(models.Model):
     server_id = models.BigIntegerField(default=1)
     trip_ticket_id = models.BigIntegerField() #scm_tr_trip_ticket PK
