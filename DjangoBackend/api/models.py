@@ -58,11 +58,13 @@ class TripDetailsModel(models.Model):
     trip_ticket_detail_id = models.BigAutoField(primary_key=True)
     ref_trans_date = models.DateTimeField()
     ref_trans_id = models.BigIntegerField()
+    ref_trans_code_id = models.BigIntegerField()
     full_address = models.TextField()
     trans_name = models.CharField(max_length=255)
     remarks = models.TextField()
     branch_charges = models.DecimalField(max_digits=18, decimal_places=2)
     document_amount = models.DecimalField(max_digits=18, decimal_places=2)
+    detail_volume = models.DecimalField(max_digits=18, decimal_places=6)
     
     
     class Meta:

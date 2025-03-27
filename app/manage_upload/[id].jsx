@@ -293,14 +293,14 @@ export default function OutslipUpload() {
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                         <View style={styles.ticketHeader}>
                             <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_id}</Text>
-                                                            <Text style={styles.tripId}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
-                                                            <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
+                            <Text style={styles.tripId2}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
+                            <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
                         </View>
                         <Ionicons
                             name={isExpanded ? "chevron-down" : "chevron-forward"}
                             size={20}
                             color="#666"
-                            style={{alignSelf: 'center'}}
+                            style={{ alignSelf: 'center' }}
                         />
                         {isExpanded && (
                             <>
@@ -642,6 +642,18 @@ const styles = StyleSheet.create({
     },
     tripId: {
         fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+    },
+    tripId2: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+    },
+    tripId3: {
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#fff',
         textAlign: 'center',

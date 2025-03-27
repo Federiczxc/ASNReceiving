@@ -2,13 +2,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable } from 'react-native';
 import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location'
 
-import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import api from '../../api';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import Carousel from 'react-native-reanimated-carousel';
-import { LogBox } from 'react-native';
 import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +27,27 @@ export default function OutslipUpload() {
         ref_trans_id: null,
         items: []
     });
+
+    const getCurrentLocation = async () => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Error', 'Location permission denied');
+            return null;
+        }
+        try {
+            const location = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = location.coords;
+            console.log('Latitude', latitude);
+            console.log('Longitude', longitude);
+            return { latitude, longitude };
+        }
+        catch (error) {
+            console.error('Error getting location:', error);
+            Alert.alert('Error', 'Failed to get location');
+            return null;
+        }
+    };
+
     const navigation = useNavigation();
     const [isLoading, setIsLoading] = useState(true);
     const [ocrText, setOcrText] = useState('');
@@ -49,6 +69,10 @@ export default function OutslipUpload() {
     const [cameraPreview, setCameraPreview] = useState(false);
     useEffect(() => {
         setIsLoading(true);
+        const checkPermissions = async () => {
+            await verifyCameraPermissions();
+        };
+        checkPermissions();
         const fetchData = async () => {
             try {
                 const accessToken = await AsyncStorage.getItem('access_token');
@@ -88,20 +112,47 @@ export default function OutslipUpload() {
         }, [isCameraFullscreen, cameraPreview])
     );
     /* console.log("brara", tripBranch); */
-    const pickImage = async (index) => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 1,
-        });
-        if (!result.canceled) {
-            let newImages = [...images];
-            newImages[index] = result.assets[0].uri;
-            setImages(newImages);
-        }
-    };
 
+    const verifyCameraPermissions = async () => {
+        if (permission?.granted) {
+            return true;
+        }
+
+        const { granted } = await requestPermission();
+        if (!granted) {
+            Alert.alert(
+                'Permission Required',
+                'You need to grant camera permissions to take pictures',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => Linking.openSettings() // Opens app settings so user can enable permissions
+                    }
+                ]
+            );
+            return false;
+        }
+        return true;
+    };
     const takePicture = async (index) => {
+        const hasPermission = await verifyCameraPermissions();
+        if (!hasPermission) {
+            Alert.alert(
+                'Permission Denied',
+                'Camera access is required to take pictures',
+                [
+                    {
+                        text: 'Open Settings',
+                        onPress: () => Linking.openSettings()
+                    },
+                    {
+                        text: 'Cancel',
+                        style: 'cancel'
+                    }
+                ]
+            );
+            return;
+        }
         if (cameraRef) {
             const photo = await cameraRef.takePictureAsync({ quality: 1 })
             setCapturedImage(photo.uri)
@@ -217,13 +268,61 @@ export default function OutslipUpload() {
     };
 
     const handleSubmit = async () => {
+        const hasImages = images.some(img => img !== null);
+        if (!hasImages) {
+            Alert.alert('Error', 'Please capture at least one image before submitting');
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         const accessToken = await AsyncStorage.getItem('access_token');
         const userData = await AsyncStorage.getItem('user_data');
         const userId = userData ? JSON.parse(userData).user_id : null;
 
-        console.log('acotot', userId);
+
+        console.log('acotot', userId, outslipDetail.trip_ticket_id, outslipDetail.branch_id,);
         try {
+            //CHECK CHECKIN
+
+            const timeInCheck = await api.get('/check-clock-in/', {
+                params: {
+                    trip_ticket_id: outslipDetail.trip_ticket_id,
+                    branch_id: outslipDetail.branch_id,
+                },
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            })
+
+            console.log('aa', timeInCheck.data)
+            const hasClockedIn = timeInCheck.data.has_clocked_in || false;
+            console.log('dad', hasClockedIn);
+
+            if (!hasClockedIn) {
+                const location = await getCurrentLocation();
+                if (!location) {
+                    Alert.alert('Error', 'Failed to get location')
+                    return;
+                }
+                const { latitude, longitude } = location;
+                const clockInData = {
+                    latitude_in: latitude,
+                    longitude_in: longitude,
+                    created_by: userId,
+                    trip_ticket_id: outslipDetail.trip_ticket_id,
+                    branch_id: outslipDetail.branch_id,
+                };
+
+                const clockInResponse = await api.post("/clock-in/", clockInData, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                })
+                console.log('ti', clockInResponse)
+            }
+
+            //UPLOADING SIDE
             const formData = new FormData();
             images.forEach((imageUri, index) => {
                 if (imageUri) {
@@ -367,8 +466,8 @@ export default function OutslipUpload() {
                         <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                             <View style={styles.ticketHeader}>
                                 <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_id}</Text>
-                                <Text style={styles.tripId}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
-                                <Text style={styles.tripId}>Branch Name: {tripBranch.branch_name}</Text>
+                                <Text style={styles.tripId2}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
+                                <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
                             </View>
                             <Ionicons
                                 name={isExpanded ? "chevron-down" : "chevron-forward"}
@@ -409,7 +508,8 @@ export default function OutslipUpload() {
                                                     </View>
                                                     <View style={styles.bodyColumn3}>
 
-                                                        <Text style={styles.bodyLabel}>{item.item_qty}</Text>
+                                                        <Text style={styles.bodyLabel}>{Math.round(Number(item.item_qty))}</Text>
+
                                                     </View>
                                                     <View style={styles.bodyColumn4}>
 
@@ -544,7 +644,7 @@ export default function OutslipUpload() {
                                                         </>
                                                     ) : (
                                                         <Text style={styles.placeholder}>No image selected. Press to upload a picture</Text>
-                                                    )}
+                                                    )}le
                                                 </TouchableOpacity>
                                             </View>)} */}
                                         </>
@@ -787,7 +887,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#333',
         borderRadius: 10,
-        marginVertical: 20,
+        marginVertical: 10,
         overflow: 'hidden',
         backgroundColor: '#fff',
     },
@@ -812,6 +912,18 @@ const styles = StyleSheet.create({
 
     tripId: {
         fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+    },
+    tripId2: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+    },
+    tripId3: {
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#fff',
         textAlign: 'center',
@@ -913,7 +1025,7 @@ const styles = StyleSheet.create({
         borderWidth: 0.5,
     },
     bodyLabel: {
-        fontSize: 10
+        fontSize: 12
     },
     bodyColumn1: {
         width: '30%',

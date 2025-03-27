@@ -71,7 +71,7 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
-        logger.warning("prorpfi", user.user_id)
+        logger.warning(f"prorpfi {user.user_id}")
         serializer = UserSerializer(user)
         return Response(serializer.data)
     
@@ -173,6 +173,7 @@ class TripDetailView(APIView):
                         'ref_trans_id': row['ref_trans_id'],
                         'ref_trans_date': row['ref_trans_date'],
                         'trans_name': row['trans_name'],
+                        'detail_volume': row['detail_volume'],
                         'remarks': row['remarks'],
                         'items': [],
                         'branch_name': row.get('branch_name'),
@@ -198,7 +199,7 @@ class TripDetailView(APIView):
                 branch_id__in=branches
             )
             branch_serializer = TripBranchSerializer(branch_data, many=True)
-            logger.warning(f'ada', list(trips_map.values()))
+            logger.warning(f'ada{list(trips_map.values())}')
             return Response({
                 'tripdetails': list(trips_map.values()),
                 'branches': branch_serializer.data
@@ -223,6 +224,8 @@ class ManageAttendanceView(APIView):
 
         return Response(response_data)
     
+    
+
 class ManageTripDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -545,81 +548,7 @@ class UploadOutslipView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response({'error': 'All images failed to upload', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
 
-
-""" class EditUploadedPictures(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        upload_images = request.FILES.getlist('image',)    #should be same name from frointend
-        existing_images = request.data.getlist('existing_images', [])
-        upload_remarks = request.data.getlist('upload_remarks', '')
-        upload_text = request.data.getlist('upload_text', '')
-        trip_ticket_detail_id = request.data.get('trip_ticket_detail_id')
-        trip_ticket_id = request.data.get('trip_ticket_id')
-        branch_id = request.data.get('branch_id')
-        removed_ids = request.data.getlist('removed_ids', [])
-        user_id = request.user.user_id
-        logger.warning("removed", removed_ids)
-        try: 
-            if removed_ids:
-                OutslipImagesModel.objects.filter(upload_id__in=removed_ids).delete()
-            get_data = OutslipImagesModel.objects.filter(trip_ticket_detail_id=trip_ticket_detail_id)    
-            existing_image_objects = OutslipImagesModel.objects.filter(
-                trip_ticket_detail_id=trip_ticket_detail_id,
-                upload_files__in=existing_images  # Filter by existing image URLs
-                
-            )
-            for i, image in enumerate(existing_image_objects):
-                if i < len(upload_remarks):
-                    image.upload_remarks = upload_remarks[i]
-                if i < len(upload_text):
-                    image.upload_text = upload_text[i]
-                    image.updated_by = user_id
-                    image.updated_date = timezone.now()
-                    image.save()
-                    
-            for i, upload_image in enumerate(upload_images):
-                if i >= len(get_data):
-                    
-                    
-                    remark = upload_remarks[i] if i < len(upload_remarks) else ''
-                    upload_txt = upload_text[i] if i < len(upload_text) else ''
-                    file_path = f'outslips/{upload_image.name}'
-                    saved_path = default_storage.save(file_path, ContentFile(upload_image.read()))
-                    file_url = f"{settings.BASE_URL}{settings.MEDIA_URL}{saved_path}"
-                    new_image = OutslipImagesModel(
-                        trip_ticket_detail_id=trip_ticket_detail_id,
-                        trip_ticket_id = trip_ticket_id,
-                        branch_id = branch_id,
-                        upload_files=file_url,
-                        upload_remarks=remark,
-                        upload_text=upload_txt,
-                        created_by = user_id,
-                        created_date = timezone.now(),
-                        updated_by = user_id,
-                        updated_date = timezone.now()
-                    )
-                    new_image.save()
-            return Response ({'message': 'Update successful'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
- """
-class SaveLocationView(APIView):
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        latitude = request.data.get('latitude')
-        longitude = request.data.get('longitude')
-        
-        if not latitude or not longitude:
-            return Response({"error": "Latitude and longitude are required."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            location_data = self.reverse_geocode(latitude, longitude)
-            return Response({"message": "Location saved", "data": location_data}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    def reverse_geocode(self, lat, lon):
+def reverse_geocode(lat, lon):
         url = "https://us1.locationiq.com/v1/reverse"
         params = {
             'key' : 'pk.290fe86c4236d073d5c6996361d7d23d',
@@ -631,47 +560,22 @@ class SaveLocationView(APIView):
         response = requests.get(url, params=params)
         response.raise_for_status()
         return response.json()
-    
-class RetrieveLocationView(APIView):
-    permission_classes = [AllowAny]
+
+class CheckClockInView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user_ip = self.get_client_ip(request)
-        g = GeoIP2()
-        
-        try:
-            location_data = g.city(user_ip)  # Fetch location details
-            latitude = location_data['latitude']
-            longitude = location_data['longitude']
-            
-            locationiq_response = self.reverse_geocode(latitude, longitude)
-            
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
-        
-        return Response({"ip": user_ip, "longitude": longitude, "latitude": latitude, "fulladdress": locationiq_response.get('display_name')})
+        user_id = request.user.user_id
+        trip_ticket_id = request.query_params.get('trip_ticket_id')
+        branch_id = request.query_params.get('branch_id')
+        print(f"Checking clock-in for: user={user_id}, trip={trip_ticket_id}, branch={branch_id}")
+        exists = TripTicketBranchLogsModel.objects.filter(
+            created_by=user_id,
+            trip_ticket_id=trip_ticket_id,
+            branch_id=branch_id,
+        ).exists()
 
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
-    
-    def reverse_geocode(self, lat, lon):
-        url = "https://us1.locationiq.com/v1/reverse"
-        params = {
-            'key' : 'pk.290fe86c4236d073d5c6996361d7d23d',
-            'lat': lat,
-            'lon': lon,
-            'format': 'json'
-        }
-        
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
-    
+        return Response({'has_clocked_in': exists})
 class ClockInAttendance(APIView):
     permission_classes = [IsAuthenticated]
     def post (self, request):
@@ -681,7 +585,7 @@ class ClockInAttendance(APIView):
         latitude = data.get('latitude_in')
         longitude = data.get('longitude_in')
         branch_id=data.get('branch_id')
-        current_date = datetime.now().date()
+        #current_date = datetime.now().date()
         if not latitude or not longitude:
             return Response({"error": "Latitude and longitude are required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -698,16 +602,16 @@ class ClockInAttendance(APIView):
             else:
                 has_clocked_in = TripTicketBranchLogsModel.objects.filter(
                         created_by=user_id,
-                        created_date__date=current_date,
+                       # created_date__date=current_date,
                         trip_ticket_id=trip_ticket_id,
                         branch_id= branch_id
                     ).first()
                 if has_clocked_in:
                     return Response(
-                        {"error": f"You have already clocked in today at {has_clocked_in.time_in}."},
+                        {"error": f"You have already clocked in at {has_clocked_in.time_in}."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            location_data = self.reverse_geocode(latitude, longitude)
+            location_data = reverse_geocode(data['latitude_in'], data['longitude_in'])
             location_in = location_data.get('display_name')
             TripTicketBranchLogsModel.objects.create(
                 server_id=1,
@@ -727,18 +631,7 @@ class ClockInAttendance(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-    def reverse_geocode(self, lat, lon):
-        url = "https://us1.locationiq.com/v1/reverse"
-        params = {
-            'key' : 'pk.290fe86c4236d073d5c6996361d7d23d',
-            'lat': lat,
-            'lon': lon,
-            'format': 'json'
-        }
-        
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
+    
 class ClockOutAttendance(APIView):
     permission_classes = [IsAuthenticated]
     def post (self, request):
@@ -746,14 +639,13 @@ class ClockOutAttendance(APIView):
         user_id = request.user.user_id
         trip_ticket_id=data.get('trip_ticket_id')
         branch_id=data.get('branch_id')
-        latitude = data.get('latitude_out')
-        longitude = data.get('longitude_out')
-        current_date = datetime.now().date()
+        
+        #current_date = datetime.now().date()
         
         try:
             has_clocked_in = TripTicketBranchLogsModel.objects.filter(
                 created_by=user_id,
-                created_date__date=current_date,
+                #created_date__date=current_date,
                 trip_ticket_id=trip_ticket_id,
                 branch_id=branch_id
             ).first()
@@ -765,7 +657,7 @@ class ClockOutAttendance(APIView):
                 )
             if has_clocked_in.time_out:
                 return Response(
-                    {"error": f"You have already clocked out today at {has_clocked_in.time_out}."},
+                    {"error": f"You have already clocked out at {has_clocked_in.time_out}."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             trip_details = TripDetailsModel.objects.filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
@@ -780,31 +672,23 @@ class ClockOutAttendance(APIView):
                         {"error": f"Upload missing for trip ticket detail #: {detail.trip_ticket_detail_id}."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            location_data = self.reverse_geocode(latitude, longitude)
+            latitude = data.get('latitude_out')
+            longitude = data.get('longitude_out')
+            
+            location_data = reverse_geocode(data['latitude_out'], data['longitude_out'])
             location_out = location_data.get('display_name')
             has_clocked_in.time_out = timezone.now()
             has_clocked_in.updated_by = user_id
             has_clocked_in.updated_date = timezone.now()
             has_clocked_in.location_out = location_out
             has_clocked_in.ip_address_out = ''
-            has_clocked_in.latitude_out = data ['latitude_out']
-            has_clocked_in.longitude_out = data['longitude_out']
+            has_clocked_in.latitude_out = latitude
+            has_clocked_in.longitude_out = longitude
             has_clocked_in.save()
             return Response ({"message": "insucc"}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    def reverse_geocode(self, lat, lon):
-        url = "https://us1.locationiq.com/v1/reverse"
-        params = {
-            'key' : 'pk.290fe86c4236d073d5c6996361d7d23d',
-            'lat': lat,
-            'lon': lon,
-            'format': 'json'
-        }
-        
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
     
+   
         
    
