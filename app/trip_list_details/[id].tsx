@@ -380,8 +380,9 @@ const styles = StyleSheet.create({
     },
     clockContainer: {
         flexDirection: 'row',
-        width: '100%'
-
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerContainer: {
         width: '100%',
@@ -516,7 +517,7 @@ const styles = StyleSheet.create({
         marginLeft: 20
     },
     uploadPrompt: {
-        color: '#ffa500', 
+        color: '#ffa500',
         fontSize: 14,
         marginLeft: 5,
         fontStyle: 'italic',

@@ -396,6 +396,7 @@ class OutslipDetailView(APIView):
                         'trip_ticket_id': row['trip_ticket_id'],
                         'branch_id': row['branch_id'],
                         'ref_trans_id': row['ref_trans_id'],
+                        'ref_trans_code_id': row['ref_trans_code_id'],
                         'ref_trans_date': row['ref_trans_date'],
                         'trans_name': row['trans_name'],
                         'remarks': row['remarks'],

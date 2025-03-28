@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location'
-
+import Marker, { Position, ImageFormat, TextBackgroundType } from 'react-native-image-marker'
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import api from '../../api';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -64,6 +64,7 @@ export default function OutslipUpload() {
     const [cameraRef, setCameraRef] = useState(null);
     const [permission, requestPermission] = useCameraPermissions();
     const [isCameraMode, setIsCameraMode] = useState(false);
+    const [quantity, setQuantity] = useState('');
     const [isCameraFullscreen, setIsCameraFullscreen] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
     const [cameraPreview, setCameraPreview] = useState(false);
@@ -82,12 +83,12 @@ export default function OutslipUpload() {
                         Authorization: `Bearer ${accessToken}`,
                     },
                 });
-
+                setQuantity(Math.round(Number(response.data.tripdetails[0].items[0].item_qty)).toString())
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
                 console.log("out", response.data);
                 setIsLoading(false);
-                console.log("OCLE", ocrResults.length)
+                /* console.log("OCLE", ocrResults.length) */
             } catch (error) {
                 if (error.response.status === 401) {
                     Alert.alert('Error', 'Your login session has expired. Please log in');
@@ -268,17 +269,17 @@ export default function OutslipUpload() {
     };
 
     const handleSubmit = async () => {
-        const hasImages = images.some(img => img !== null);
-        if (!hasImages) {
-            Alert.alert('Error', 'Please capture at least one image before submitting');
-            setIsLoading(false);
-            return;
-        }
+        /*  const hasImages = images.some(img => img !== null);
+         if (!hasImages) {
+             Alert.alert('Error', 'Please capture at least one image before submitting');
+             setIsLoading(false);
+             return;
+         } */
         setIsLoading(true);
         const accessToken = await AsyncStorage.getItem('access_token');
         const userData = await AsyncStorage.getItem('user_data');
         const userId = userData ? JSON.parse(userData).user_id : null;
-
+        console.log("tite", quantity);
 
         console.log('acotot', userId, outslipDetail.trip_ticket_id, outslipDetail.branch_id,);
         try {
@@ -358,25 +359,25 @@ export default function OutslipUpload() {
                 formData.append('upload_remarks', '');
             }
             console.log("paso", formData);
-            const response = await api.post('/outslipupload/', formData, {
+            /* const response = await api.post('/outslipupload/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${accessToken}`,
                 },
-            });
+            }); */
             Notifier.showNotification({
                 title: 'Success',
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-            router.replace({
+            /* router.replace({
                 pathname: 'trip_list_details/[id]',
                 params: {
                     id: tripBranch.branch_id,
                     trip_ticket_id: outslipDetail.trip_ticket_id.toString()
                 }
             }
-            )
+            ) */
             console.log('succ', response.data);
         }
         catch (error) {
@@ -475,58 +476,64 @@ export default function OutslipUpload() {
                                 color="#666"
                                 style={{ alignSelf: 'center' }}
                             />
-                            {isExpanded && (
-                                <>
-                                    <View style={styles.ticketBody}>
-                                        <View style={styles.tableHeader}>
-                                            <View style={{ width: '30%', paddingLeft: 3 }}>
-                                                <Text style={styles.headerLabel}>Barcode</Text>
-                                            </View>
-                                            <View style={{ width: '45%' }}>
-
-                                                <Text style={styles.headerLabel}>Description</Text>
-                                            </View>
-                                            <View style={{ width: '15%' }}>
-
-                                                <Text style={styles.headerLabel}>QTY</Text>
-                                            </View>
-                                            <View style={{ width: '10%' }}>
-
-                                                <Text style={styles.headerLabel}>UOM</Text>
-                                            </View>
-                                        </View>
-
-                                        {outslipDetail.items.map((item) => (
-                                            <View key={`${item.item_id}-${item.ref_trans_id}`}>
-                                                <View style={styles.tableBody}>
-                                                    <View style={styles.bodyColumn1}>
-                                                        <Text style={styles.bodyLabel}>{item.barcode}</Text>
-                                                    </View>
-                                                    <View style={styles.bodyColumn2}>
-
-                                                        <Text style={styles.bodyLabel}>{item.item_description}</Text>
-                                                    </View>
-                                                    <View style={styles.bodyColumn3}>
-
-                                                        <Text style={styles.bodyLabel}>{Math.round(Number(item.item_qty))}</Text>
-
-                                                    </View>
-                                                    <View style={styles.bodyColumn4}>
-
-                                                        <Text style={styles.bodyLabel}>{item.uom_code}</Text>
-                                                    </View>
-                                                </View>
-
-
-                                            </View>
-                                        ))}
-                                    </View>
-                                    <View style={styles.ticketFooter}>
-                                        <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
-                                    </View>
-                                </>
-                            )}
                         </TouchableOpacity>
+
+                        {isExpanded && (
+                            <>
+                                <View style={styles.ticketBody}>
+                                    <View style={styles.tableHeader}>
+                                        <View style={{ width: '30%', paddingLeft: 3 }}>
+                                            <Text style={styles.headerLabel}>Barcode</Text>
+                                        </View>
+                                        <View style={{ width: '45%' }}>
+
+                                            <Text style={styles.headerLabel}>Description</Text>
+                                        </View>
+                                        <View style={{ width: '15%' }}>
+
+                                            <Text style={styles.headerLabel}>QTY</Text>
+                                        </View>
+                                        <View style={{ width: '10%' }}>
+
+                                            <Text style={styles.headerLabel}>UOM</Text>
+                                        </View>
+                                    </View>
+
+                                    {outslipDetail.items.map((item) => (
+                                        <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                            <View style={styles.tableBody}>
+                                                <View style={styles.bodyColumn1}>
+                                                    <Text style={styles.bodyLabel}>{item.barcode}</Text>
+                                                </View>
+                                                <View style={styles.bodyColumn2}>
+
+                                                    <Text style={styles.bodyLabel}>{item.item_description}</Text>
+                                                </View>
+                                                <View style={styles.bodyColumn3}>
+
+                                                    <TextInput style={styles.bodyLabelQTY}
+                                                        keyboardType='numeric'
+                                                        maxLength={10}
+                                                        onChangeText={setQuantity}
+                                                        value={quantity}
+                                                        placeholder={Math.round(Number(item.item_qty)).toString()}
+                                                    />
+                                                </View>
+                                                <View style={styles.bodyColumn4}>
+
+                                                    <Text style={styles.bodyLabel}>{item.uom_code}</Text>
+                                                </View>
+                                            </View>
+
+
+                                        </View>
+                                    ))}
+                                </View>
+                                <View style={styles.ticketFooter}>
+                                    <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
+                                </View>
+                            </>
+                        )}
                     </View>
                 </View>
 
@@ -681,9 +688,9 @@ export default function OutslipUpload() {
 
                 {/* Buttons Section */}
 
-            </ScrollView>
+            </ScrollView >
 
-        </View>
+        </View >
     );
 }
 const styles = StyleSheet.create({
@@ -1027,6 +1034,12 @@ const styles = StyleSheet.create({
     bodyLabel: {
         fontSize: 12
     },
+    bodyLabelQTY: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        borderWidth: 1,
+        alignSelf: 'center'
+    },
     bodyColumn1: {
         width: '30%',
     },
@@ -1034,10 +1047,12 @@ const styles = StyleSheet.create({
         width: '45%',
     },
     bodyColumn3: {
-        width: '10%',
+        width: '15%',
+        alignContent: 'center',
+        alignSelf: 'center',
     },
     bodyColumn4: {
         width: '10%',
-        marginLeft: 20
+        /* marginLeft: 20 */
     }
 });
