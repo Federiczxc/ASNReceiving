@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location'
-import Marker, { Position, ImageFormat, TextBackgroundType } from 'react-native-image-marker'
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import api from '../../api';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -11,6 +10,7 @@ import Carousel from 'react-native-reanimated-carousel';
 import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import Checkbox from 'expo-checkbox'
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
         branch_name: '',
@@ -25,6 +25,7 @@ export default function OutslipUpload() {
         branch_name: '',
         ref_trans_date: '',
         ref_trans_id: null,
+        ref_trans_no: null,
         items: []
     });
 
@@ -54,6 +55,8 @@ export default function OutslipUpload() {
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isExpanded2, setIsExpanded2] = useState(true);
+    const [isExpandedItems, setIsExpandedItems] = useState({});
+
     const trip_ticket_detail_id = id;
     const [images, setImages] = useState([null]);
     const [ocrResults, setOcrResults] = useState([]);
@@ -64,10 +67,12 @@ export default function OutslipUpload() {
     const [cameraRef, setCameraRef] = useState(null);
     const [permission, requestPermission] = useCameraPermissions();
     const [isCameraMode, setIsCameraMode] = useState(false);
-    const [quantity, setQuantity] = useState('');
+    const [quantity, setQuantity] = useState({});
     const [isCameraFullscreen, setIsCameraFullscreen] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
     const [cameraPreview, setCameraPreview] = useState(false);
+    const [isChecked, setChecked] = useState(false);
+
     useEffect(() => {
         setIsLoading(true);
         const checkPermissions = async () => {
@@ -83,10 +88,14 @@ export default function OutslipUpload() {
                         Authorization: `Bearer ${accessToken}`,
                     },
                 });
-                setQuantity(Math.round(Number(response.data.tripdetails[0].items[0].item_qty)).toString())
+                const initialQuantities = {};
+                response.data.tripdetails[0].items.forEach(item => {
+                    initialQuantities[item.item_id] = Math.round(Number(item.item_qty)).toString();
+                });
+                setQuantity(initialQuantities)
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
-                console.log("out", response.data);
+                console.log("out", response.data.tripdetails[0]);
                 setIsLoading(false);
                 /* console.log("OCLE", ocrResults.length) */
             } catch (error) {
@@ -267,18 +276,22 @@ export default function OutslipUpload() {
             setIsLoading(false);
         }
     };
-
+    const toggleItemExpansion = (itemId) => {
+        setIsExpandedItems(prev => (Object.assign(Object.assign({}, prev), { [itemId]: !prev[itemId] })));
+    };
     const handleSubmit = async () => {
-        /*  const hasImages = images.some(img => img !== null);
+         const hasImages = images.some(img => img !== null);
          if (!hasImages) {
              Alert.alert('Error', 'Please capture at least one image before submitting');
              setIsLoading(false);
              return;
-         } */
+         }
         setIsLoading(true);
         const accessToken = await AsyncStorage.getItem('access_token');
         const userData = await AsyncStorage.getItem('user_data');
         const userId = userData ? JSON.parse(userData).user_id : null;
+        const userObject = userData ? JSON.parse(userData) : null;
+        const username = userObject?.username;
         console.log("tite", quantity);
 
         console.log('acotot', userId, outslipDetail.trip_ticket_id, outslipDetail.branch_id,);
@@ -342,7 +355,13 @@ export default function OutslipUpload() {
             const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             formData.append('created_date', createdDate);
             formData.append('created_by', userId);
-            formData.append('branch_id', tripBranch.branch_id)
+            formData.append('branch_id', tripBranch.branch_id);
+
+            /* Watermarked formdata */
+            formData.append('branch_name', tripBranch.branch_name);
+            formData.append('ref_trans_id', outslipDetail.ref_trans_id);
+            formData.append('trans_name', outslipDetail.trans_name);
+            formData.append('username', username);
             if (Array.isArray(ocrResults)) {
                 ocrResults.forEach((ocrResult) => {
                     formData.append('upload_text', ocrResult);
@@ -359,12 +378,14 @@ export default function OutslipUpload() {
                 formData.append('upload_remarks', '');
             }
             console.log("paso", formData);
-            /* const response = await api.post('/outslipupload/', formData, {
+            const response = await api.post('/outslipupload/', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${accessToken}`,
                 },
-            }); */
+                
+
+            });
             Notifier.showNotification({
                 title: 'Success',
                 description: 'Outslip uploaded successfully',
@@ -422,13 +443,13 @@ export default function OutslipUpload() {
                         style={styles.captureButton}
                         onPress={takePicture}
                     >
-                        <Ionicons name='camera-outline' size={42} />
+                        <Ionicons color='hsl(0,0%,90%)' name='camera-sharp' style={{ alignSelf: 'center' }} size={42} />
                         {/* <Text style={styles.captureButtonText}>Capture</Text> */}
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.closeButton}
                         onPress={() => setIsCameraFullscreen(false)}>
-                        <Ionicons name='close-outline' size={32} />
+                        <Ionicons color='hsl(0,0%,90%)' name='close-outline' size={42} />
                         {/*<Text style={styles.closeButtonText}>Close</Text> */}
                     </TouchableOpacity>
                 </View>
@@ -466,8 +487,8 @@ export default function OutslipUpload() {
                     <View style={styles.ticketContainer}>
                         <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_id}</Text>
-                                <Text style={styles.tripId2}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
+                                <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_no}</Text>
+                                <Text style={styles.tripId2}>Trip Ticket Detail #{outslipDetail.trip_ticket_detail_id}</Text>
                                 <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
                             </View>
                             <Ionicons
@@ -482,14 +503,22 @@ export default function OutslipUpload() {
                             <>
                                 <View style={styles.ticketBody}>
                                     <View style={styles.tableHeader}>
-                                        <View style={{ width: '30%', paddingLeft: 3 }}>
+                                        <View style={{ width: '10%', paddingLeft: 3 }}>
+
+                                            <Text style={styles.headerLabel}>PKG</Text>
+                                        </View>
+                                        <View style={{ width: '15%' }}>
+
+                                            <Text style={styles.headerLabel}>COMP</Text>
+                                        </View>
+                                        <View style={{ width: '25%' }}>
                                             <Text style={styles.headerLabel}>Barcode</Text>
                                         </View>
-                                        <View style={{ width: '45%' }}>
+                                        <View style={{ width: '30%' }}>
 
                                             <Text style={styles.headerLabel}>Description</Text>
                                         </View>
-                                        <View style={{ width: '15%' }}>
+                                        <View style={{ width: '10%' }}>
 
                                             <Text style={styles.headerLabel}>QTY</Text>
                                         </View>
@@ -497,34 +526,98 @@ export default function OutslipUpload() {
 
                                             <Text style={styles.headerLabel}>UOM</Text>
                                         </View>
+
                                     </View>
 
                                     {outslipDetail.items.map((item) => (
                                         <View key={`${item.item_id}-${item.ref_trans_id}`}>
-                                            <View style={styles.tableBody}>
-                                                <View style={styles.bodyColumn1}>
-                                                    <Text style={styles.bodyLabel}>{item.barcode}</Text>
-                                                </View>
-                                                <View style={styles.bodyColumn2}>
+                                            <>
+                                                <TouchableOpacity onPress={() => toggleItemExpansion(item.item_id)} activeOpacity={0.7}>
 
-                                                    <Text style={styles.bodyLabel}>{item.item_description}</Text>
-                                                </View>
-                                                <View style={styles.bodyColumn3}>
+                                                    <View style={styles.tableBody}>
+                                                        <View style={styles.bodyColumnPKG}>
+                                                            <Checkbox
+                                                                value={item.main_item === 1}
+                                                                color={item.main_item === 1 ? '#4CAF50' : undefined}
+                                                            />
+                                                        </View>
+                                                        <View style={styles.bodyColumnCOMP}>
+                                                            <Checkbox
+                                                                value={item.component_item === 1}
+                                                                color={item.component_item === 1 ? '#4CAF50' : undefined}
+                                                            />
+                                                        </View>
+                                                        <View style={styles.bodyColumn1}>
+                                                            <Text style={styles.bodyLabel}>{item.barcode}</Text>
+                                                        </View>
+                                                        <View style={styles.bodyColumn2}>
 
-                                                    <TextInput style={styles.bodyLabelQTY}
-                                                        keyboardType='numeric'
-                                                        maxLength={10}
-                                                        onChangeText={setQuantity}
-                                                        value={quantity}
-                                                        placeholder={Math.round(Number(item.item_qty)).toString()}
-                                                    />
-                                                </View>
-                                                <View style={styles.bodyColumn4}>
+                                                            <Text style={styles.bodyLabel}>{item.item_description}</Text>
+                                                        </View>
+                                                        <View style={styles.bodyColumn3}>
 
-                                                    <Text style={styles.bodyLabel}>{item.uom_code}</Text>
-                                                </View>
-                                            </View>
+                                                            {/*  <TextInput style={styles.bodyLabelQTY}
+                                                                keyboardType='numeric'
+                                                                maxLength={10}
+                                                                onChangeText={(text) => {
+                                                                    setQuantity(prev => ({
+                                                                        ...prev,
+                                                                        [item.item_id]: text
+                                                                    }));
+                                                                }}
+                                                                value={quantity[item.item_id] || ''}
+                                                                placeholder={Math.round(Number(item.item_qty)).toString()}
+                                                            /> */}
+                                                            <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))}</Text>
+                                                        </View>
+                                                        <View style={styles.bodyColumn4}>
 
+                                                            <Text style={styles.bodyLabel}>{item.uom_code}</Text>
+                                                        </View>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            </>
+
+                                            {
+
+                                                isExpandedItems[item.item_id] && (
+                                                    <>
+                                                        {
+                                                            Array.isArray(item.serial_details) && item.serial_details.length > 0 ? (
+                                                                item.serial_details.map((serial, idx) => (
+                                                                    <View key={`${item.ref_trans_id}-${idx}`} style={styles.expandedItems}>
+                                                                        <View style={styles.bodyColumnPKG}>
+                                                                            <Text style={styles.expandedValue}></Text>
+                                                                        </View>
+                                                                        <View style={styles.bodyColumnCOMP}>
+                                                                            <Text style={styles.expandedValue}></Text>
+                                                                        </View>
+                                                                        <View style={styles.bodyColumn1}>
+                                                                            <Text style={styles.expandedValue}>{serial.batch_no || 'N/A'}</Text>
+                                                                        </View>
+                                                                        <View style={styles.bodyColumn2}>
+                                                                            <Text style={styles.expandedValue}>{serial.ser_bat_no || 'N/A'}</Text>
+                                                                        </View>
+                                                                        <View style={styles.bodyColumn3}>
+                                                                            <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text>
+
+                                                                        </View>
+                                                                        <View style={styles.bodyColumn4}>
+                                                                            <Text style={styles.expandedValue}>{serial.uom_code || 'N/A'}</Text>
+                                                                        </View>
+
+                                                                    </View>
+                                                                ))
+                                                            ) : (
+                                                                <View style={styles.expandedItems}>
+                                                                    <Text style={styles.expandedValue}>No serial details available</Text>
+                                                                </View>
+                                                            )
+                                                        }
+
+                                                    </>
+                                                )
+                                            }
 
                                         </View>
                                     ))}
@@ -560,7 +653,7 @@ export default function OutslipUpload() {
 
                         <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Upload Signed ASN</Text>
+                                <Text style={styles.tripId}>Upload Images</Text>
                             </View>
 
                         </TouchableOpacity>
@@ -750,6 +843,7 @@ const styles = StyleSheet.create({
     },
     captureButton: {
         backgroundColor: '#4caf50',
+
         padding: 5,
         borderRadius: 0,
         alignItems: 'center',
@@ -951,18 +1045,26 @@ const styles = StyleSheet.create({
         bottom: 0,
         backgroundColor: 'black',
         zIndex: 100,
+        justifyContent: 'center',
+
     },
     fullscreenCamera: {
-        flex: 1,
+        aspectRatio: 3 / 4,
+        width: '100%',
+        alignSelf: 'center',
     },
-    /* captureButton: {
+    captureButton: {
         position: 'absolute',
         bottom: 30,
         alignSelf: 'center',
-        backgroundColor: '#4caf50',
+        /* backgroundColor: '#4caf50', */
+        backgroundColor: 'transparent',
+        borderColor: 'hsl(0,0%,90%)',
+        borderWidth: 3,
         padding: 15,
         borderRadius: 50,
-    }, */
+
+    },
     captureButtonText: {
         color: '#fff',
         fontSize: 16,
@@ -971,7 +1073,8 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 40,
         right: 20,
-        backgroundColor: '#ff4444',
+        /* backgroundColor: '#ff4444', */
+        backgroundColor: 'transparent',
         padding: 5,
         borderRadius: 100,
     },
@@ -1032,27 +1135,61 @@ const styles = StyleSheet.create({
         borderWidth: 0.5,
     },
     bodyLabel: {
-        fontSize: 12
+        fontSize: 11,
     },
     bodyLabelQTY: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        borderWidth: 1,
-        alignSelf: 'center'
+        fontSize: 11,
+        /*  fontWeight: 'bold', */
+        /* borderWidth: 1, */
+        textAlign: 'center',
+
     },
-    bodyColumn1: {
+    bodyColumn1: { //barcode
+        width: '25%',
+    },
+    bodyColumn2: { // description
         width: '30%',
     },
-    bodyColumn2: {
-        width: '45%',
-    },
     bodyColumn3: {
-        width: '15%',
+        width: '10%',
         alignContent: 'center',
-        alignSelf: 'center',
     },
     bodyColumn4: {
         width: '10%',
         /* marginLeft: 20 */
-    }
+    },
+
+    bodyColumnPKG: {
+        width: '10%',
+        /* marginLeft: 20 */
+    },
+    bodyColumnCOMP: {
+        width: '15%',
+        /* marginLeft: 20 */
+    },
+    expandedItems: {
+        backgroundColor: '#ffd33d',
+        flexDirection: 'row',
+        padding: 5,
+        borderWidth: 0.5,
+    },
+    expandedLabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#000',
+    },
+    expandedValue: {
+        fontSize: 10,
+        color: '#000',
+    },
+    expandedRemarks: {
+        fontSize: 14,
+        color: '#000',
+        fontWeight: 500,
+        textAlign: 'center',
+    },
+    expandedFooter: {
+        backgroundColor: '#ffd33d',
+        padding: 10,
+    },
 });

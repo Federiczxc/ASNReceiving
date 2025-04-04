@@ -115,32 +115,23 @@ export default function TripList() {
             ) : (
                 <>
                     <Text style={styles.title}>Upload List</Text>
-                    <TextInput
-                        style={styles.searchBar}
-                        placeholder="Search by Trip ID"
-                        keyboardType="numeric"
-                        value={searchQuery}
-                        onChangeText={(text) => {
-                            setSearchQuery(text);
-                            setCurrentPage(1); // Reset to first page on new search
-                        }}
-                    />
+
                     <FlatList
                         data={currentItems}
                         renderItem={({ item }) => (
 
                             <View style={styles.ticketContainer}>
                                 <View style={styles.ticketHeader}>
-                                    <TouchableOpacity onPress={() => router.push({
+                                    {/*  <TouchableOpacity onPress={() => router.push({
                                         pathname: '/trip_list_branch/[id]',
                                         params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
                                     })}>
-
-                                        <Text style={styles.tripId}>Trip Ticket ID: {item.trip_ticket_id} </Text>
-                                        <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
-                                            ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
-                                            : 'N/A'}</Text>
-                                    </TouchableOpacity>
+ */}
+                                    <Text style={styles.tripId}>Trip Ticket ID: {item.trip_ticket_id} </Text>
+                                    <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                        ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
+                                        : 'N/A'}</Text>
+                                    {/* </TouchableOpacity> */}
 
                                 </View>
 
@@ -168,11 +159,12 @@ export default function TripList() {
 
                                                 <View style={styles.tableBody}>
                                                     <View style={styles.bodyColumn1}>
-                                                        <Text style={styles.bodyLabel}>{detail.trip_ticket_detail_id}
+                                                        <Text style={styles.bodyLabel}>{detail.ref_trans_no}
                                                         </Text>
                                                     </View>
                                                     <View style={styles.bodyColumn2}>
-                                                        <Text style={styles.bodyLabel}>{detail.ref_trans_id}
+                                                        <Text style={styles.bodyLabel}>
+                                                            {detail.trip_ticket_detail_id}
                                                         </Text>
                                                     </View>
                                                     <View style={styles.bodyColumn3}>
@@ -183,13 +175,13 @@ export default function TripList() {
                                         ))}
                                     </View>
                                 )}
-                                <View style={styles.ticketFooter}>
+                                {/*  <View style={styles.ticketFooter}>
                                     <Text style={styles.footerText}>
                                         {Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
                                             ? item.trip_ticket_detail_id[0].trans_name
                                             : 'N/A'}
                                     </Text>
-                                </View>
+                                </View> */}
 
 
                             </View>
@@ -239,7 +231,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#333',
         borderRadius: 15,
-        marginVertical: 35,
+        marginVertical: 20,
         overflow: 'hidden',
         width: 320,
         backgroundColor: '#fff',

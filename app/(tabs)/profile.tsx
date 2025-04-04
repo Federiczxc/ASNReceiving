@@ -29,6 +29,10 @@ export default function Profile() {
                     },
                 });
                 setUserData(response.data);
+                const userObject = accessUser ? JSON.parse(accessUser) : null;
+                const username = userObject?.username;
+
+                console.log("niono",username);
                 console.log("niono", accessToken, accessUser);
 
                 console.log("propro", response.data);
@@ -84,7 +88,7 @@ export default function Profile() {
             <View style={styles.ticketContainer}>
                 <TouchableOpacity onPress={() => router.push('/manage_upload/manage_upload')} activeOpacity={0.7}>
                     <View style={styles.ticketHeader}>
-                        <Text style={styles.tripId}>Manage ASN Uploads</Text>
+                        <Text style={styles.tripId}>Manage Uploads</Text>
                     </View>
                 </TouchableOpacity>
             </View>

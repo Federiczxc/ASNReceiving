@@ -135,7 +135,10 @@ export default function ManageAttendance() {
 
                                 </View>
                                 <View style={styles.ticketFooter}>
-                                    <Text style={styles.footerText}> Location Logged : {item.location_in} </Text>
+                                    <Text style={styles.footerText}> Location Logged In: {item.location_in} </Text>
+                                </View>
+                                <View style={styles.ticketFooter}>
+                                    <Text style={styles.footerText}> Location Logged Out: {item.location_out} </Text>
                                 </View>
 
                             </View>
@@ -180,7 +183,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#333',
         borderRadius: 15,
-        marginVertical: 35,
+        marginVertical: 20,
         overflow: 'hidden',
         width: 320,
         backgroundColor: '#fff',

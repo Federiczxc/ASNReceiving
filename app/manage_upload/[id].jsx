@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Ionicons } from '@expo/vector-icons';
+import Checkbox from 'expo-checkbox'
 
 import Carousel from 'react-native-reanimated-carousel';
 import { LogBox } from 'react-native';
@@ -23,6 +24,8 @@ export default function OutslipUpload() {
         branch_name: '',
         ref_trans_date: '',
         ref_trans_id: null,
+        ref_trans_no: null,
+
         items: []
     });
     const [tripBranch, setTripBranch] = useState({
@@ -36,6 +39,8 @@ export default function OutslipUpload() {
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isExpanded2, setIsExpanded2] = useState(true);
+    const [isExpandedItems, setIsExpandedItems] = useState({});
+
     const trip_ticket_detail_id = id;
     const [images, setImages] = useState([null]);
     const [ocrResults, setOcrResults] = useState([]);
@@ -43,6 +48,9 @@ export default function OutslipUpload() {
     const [editableOcrText, setEditableOcrText] = useState(ocrText);
     const [removedImageIds, setRemovedImageIds] = useState([]);
     const [remarks, setRemarks] = useState([]);
+    const toggleItemExpansion = (itemId) => {
+        setIsExpandedItems(prev => (Object.assign(Object.assign({}, prev), { [itemId]: !prev[itemId] })));
+    };
     useEffect(() => {
         setIsLoading(true);
         const fetchData = async () => {
@@ -79,205 +87,6 @@ export default function OutslipUpload() {
         };
         fetchData();
     }, []);
-    /* console.log("brara", tripBranch); */
-    /*    const pickImage = async (index) => {
-           const result = await ImagePicker.launchImageLibraryAsync({
-               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-               allowsEditing: true,
-               quality: 1,
-           });
-           if (!result.canceled) {
-               let newImages = [...images];
-               newImages[index] = result.assets[0].uri;
-               setImages(newImages);
-           }
-       };
-       const addNewSlide = () => {
-           setImages(prevImages => {
-               const newImages = [...prevImages, null];
-               setOcrResults(prevOcr => [...prevOcr, '']);
-               setRemarks(prevRemarks => [...prevRemarks, '']);
-               setUploadOutslip(prevUpload => [...prevUpload, {}]); // Update the data used in Carousel
-               setCurrentIndex(newImages.length - 1); // Move to the new slide
-               return newImages;
-           });
-           console.log("imaima", images)
-           console.log("adad",);
-           requestAnimationFrame(() => {
-               Notifier.showNotification({
-                   title: 'Success',
-                   description: 'Added new picture!',
-                   duration: 3000,
-               });
-           });
-       };
-   
-       const removeSlide = (index) => {
-           if (images.length === 1) {
-               Alert.alert("Cannot remove the last slide.");
-               return;
-           }
-   
-           let updatedImages = [...images];
-           updatedImages.splice(index, 1);
-   
-           let updatedOcrResults = [...ocrResults];
-           updatedOcrResults.splice(index, 1);
-   
-           let updatedRemarks = [...remarks];
-           updatedRemarks.splice(index, 1);
-   
-           let updatedUploadOutslip = [...uploadOutslip];
-           updatedUploadOutslip.splice(index, 1);
-   
-           setImages(updatedImages);
-           setOcrResults(updatedOcrResults);
-           setRemarks(updatedRemarks);
-           setUploadOutslip(updatedUploadOutslip);
-   
-           if (uploadOutslip[index]?.upload_id) {
-               setRemovedImageIds(prevIds => [...prevIds, uploadOutslip[index].upload_id]);
-               console.log("removed", removedImageIds);
-           }
-           // Adjust the currentIndex to point to a valid slide
-           let newIndex = currentIndex;
-           if (currentIndex === index) {
-               // If the removed slide was the current one, move to the previous slide
-               newIndex = Math.max(0, index - 1);
-           } else if (currentIndex > index) {
-               // If the removed slide was before the current one, adjust the currentIndex
-               newIndex = currentIndex - 1;
-           }
-   
-           setCurrentIndex(newIndex);
-   
-           requestAnimationFrame(() => {
-               Notifier.showNotification({
-                   title: 'Success',
-                   description: 'Slide removed!',
-                   duration: 3000,
-               });
-           });
-       };
-       const handleOCR = async (index) => {
-           setIsLoading(true);
-   
-           if (!images[index]) {
-               Alert.alert('No image selected', 'Please select an image first.');
-               return;
-           }
-           try {
-               const formData = new FormData();
-               formData.append('image', {
-                   uri: images[index],
-                   type: 'image/jpeg',
-                   name: 'photo.jpg',
-               });
-               const response = await api.post('/ocr/', formData, {
-                   headers: { 'Content-Type': 'multipart/form-data' },
-               });
-               let newOcrResults = [...ocrResults];
-               newOcrResults[index] = response.data.text || 'No text detected';
-               setOcrResults(newOcrResults);
-               setEditableOcrText(newOcrResults[index]);
-               console.log("formdaa", formData);
-               console.log("ocrreuslts", newOcrResults);
-           } catch (error) {
-               console.error('Error during OCR processing:', error);
-               Alert.alert('Error', 'Failed to process the image. Please try again.');
-           }
-           finally {
-               setIsLoading(false);
-           }
-       };
-    */
-    /* const handleSubmit = async () => {
-        setIsLoading(true);
-        const accessToken = await AsyncStorage.getItem('access_token');
-        const userData = await AsyncStorage.getItem('user_data');
-        const userId = userData ? JSON.parse(userData).user_id : null;
-
-        console.log('acotot', userId);
-        try {
-            const formData = new FormData();
-            images.forEach((imageUri, index) => {
-                if (imageUri) {
-                    if (typeof imageUri === 'string' && imageUri.startsWith('http')) {
-                        formData.append('existing_images', imageUri);
-                    }
-                    const imageType = imageUri.split('.').pop();  // Get the file extension
-                    const mimeType = `image/${imageType}`;  // Create the MIME type
-
-                    formData.append('image', {
-                        uri: imageUri,
-                        type: mimeType,  // Use the dynamic MIME type
-                        name: `photo_${index}.${imageType}`,  // Use the correct file extension
-                    });
-
-                }
-            });
-            removedImageIds.forEach(id => {
-                formData.append('removed_ids', id)
-            })
-            formData.append('trip_ticket_detail_id', outslipDetail.trip_ticket_detail_id.toString());
-            formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
-            formData.append('branch_id', outslipDetail.trip_ticket_id.toString());
-            const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            if (Array.isArray(ocrResults)) {
-                ocrResults.forEach((ocrResult) => {
-                    formData.append('upload_text', ocrResult);
-                });
-            } else {
-                formData.append('upload_remarks', '');
-            }
-            console
-            if (Array.isArray(remarks)) {
-                remarks.forEach((remark) => {
-                    formData.append('upload_remarks', remark);
-                });
-            } else {
-                formData.append('upload_remarks', '');
-            }
-            console.log("paso", formData);
-            const response = await api.post('/edit-upload-pics/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            Notifier.showNotification({
-                title: 'Success',
-                description: 'Outslip uploaded successfully',
-                duration: 3000,
-            });
-            router.push('/manage_upload/manage_upload')
-            console.log('succ', response.data);
-        }
-        catch (error) {
-            console.error('Error:', error);
-
-            if (error.response) {
-                console.log('Response Data:', error.response.data);
-                console.log('Response Status:', error.response.status);
-                console.log('Response Headers:', error.response.headers);
-
-                const details = error.response.data.details || [];
-                let errorMessage = 'Upload failed:\n';
-
-                details.forEach(detail => {
-                    const errors = detail.errors || {};
-                    errorMessage += `${detail.upload_image}: ${JSON.stringify(errors)}\n`;
-                });
-
-                Alert.alert('Upload Fsailed', JSON.stringify(error.response.data));
-            } else {
-                Alert.alert('Upload Failed', 'An unexpected error occurred.');
-            }
-        }
-        finally {
-            setIsLoading(false);
-        }
-    }; */
 
 
     return (
@@ -292,7 +101,7 @@ export default function OutslipUpload() {
                 <View style={styles.ticketContainer}>
                     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
                         <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_id}</Text>
+                            <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_no}</Text>
                             <Text style={styles.tripId2}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
                             <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
                         </View>
@@ -302,56 +111,120 @@ export default function OutslipUpload() {
                             color="#666"
                             style={{ alignSelf: 'center' }}
                         />
-                        {isExpanded && (
-                            <>
-                                <View style={styles.ticketBody}>
-                                    <View style={styles.tableHeader}>
-                                        <View style={{ width: '30%', paddingLeft: 3 }}>
-                                            <Text style={styles.headerLabel}>Barcode</Text>
-                                        </View>
-                                        <View style={{ width: '45%' }}>
-
-                                            <Text style={styles.headerLabel}>Description</Text>
-                                        </View>
-                                        <View style={{ width: '15%' }}>
-
-                                            <Text style={styles.headerLabel}>QTY</Text>
-                                        </View>
-                                        <View style={{ width: '10%' }}>
-
-                                            <Text style={styles.headerLabel}>UOM</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                                {outslipDetail.items.map((item) => (
-                                    <View key={`${item.item_id}-${item.ref_trans_id}`}>
-                                        <View style={styles.tableBody}>
-                                            <View style={styles.bodyColumn1}>
-                                                <Text style={styles.bodyLabel}>{item.barcode}</Text>
-                                            </View>
-                                            <View style={styles.bodyColumn2}>
-
-                                                <Text style={styles.bodyLabel}>{item.item_description}</Text>
-                                            </View>
-                                            <View style={styles.bodyColumn3}>
-
-                                                <Text style={styles.bodyLabel}>{item.item_qty}</Text>
-                                            </View>
-                                            <View style={styles.bodyColumn4}>
-
-                                                <Text style={styles.bodyLabel}>{item.uom_code}</Text>
-                                            </View>
-                                        </View>
-
-
-                                    </View>
-                                ))}
-                                <View style={styles.ticketFooter}>
-                                    <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
-                                </View>
-                            </>
-                        )}
                     </TouchableOpacity>
+
+                    {isExpanded && (
+                        <>
+                            <View style={styles.ticketBody}>
+                                <View style={styles.tableHeader}>
+                                    <View style={{ width: '10%', paddingLeft: 3 }}>
+
+                                        <Text style={styles.headerLabel}>PKG</Text>
+                                    </View>
+                                    <View style={{ width: '15%' }}>
+
+                                        <Text style={styles.headerLabel}>COMP</Text>
+                                    </View>
+                                    <View style={{ width: '25%' }}>
+                                        <Text style={styles.headerLabel}>Barcode</Text>
+                                    </View>
+                                    <View style={{ width: '30%' }}>
+
+                                        <Text style={styles.headerLabel}>Description</Text>
+                                    </View>
+                                    <View style={{ width: '10%' }}>
+
+                                        <Text style={styles.headerLabel}>QTY</Text>
+                                    </View>
+                                    <View style={{ width: '10%' }}>
+
+                                        <Text style={styles.headerLabel}>UOM</Text>
+                                    </View>
+                                </View>
+                            </View>
+                            {outslipDetail.items.map((item) => (
+                                <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                    <>
+                                        <TouchableOpacity onPress={() => toggleItemExpansion(item.item_id)} activeOpacity={0.7}>
+
+                                            <View style={styles.tableBody}>
+                                                <View style={styles.bodyColumnPKG}>
+                                                    <Checkbox
+                                                        value={item.main_item === 1}
+                                                        color={item.main_item === 1 ? '#4CAF50' : undefined}
+                                                    />
+                                                </View>
+                                                <View style={styles.bodyColumnCOMP}>
+                                                    <Checkbox
+                                                        value={item.component_item === 1}
+                                                        color={item.component_item === 1 ? '#4CAF50' : undefined}
+                                                    />
+                                                </View>
+                                                <View style={styles.bodyColumn1}>
+                                                    <Text style={styles.bodyLabel}>{item.barcode}</Text>
+                                                </View>
+                                                <View style={styles.bodyColumn2}>
+
+                                                    <Text style={styles.bodyLabel}>{item.item_description}</Text>
+                                                </View>
+                                                <View style={styles.bodyColumn3}>
+
+                                                    <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))}</Text>
+                                                </View>
+                                                <View style={styles.bodyColumn4}>
+
+                                                    <Text style={styles.bodyLabel}>{item.uom_code}</Text>
+                                                </View>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </>
+                                    {
+
+                                        isExpandedItems[item.item_id] && (
+                                            <>
+                                                {
+                                                    Array.isArray(item.serial_details) && item.serial_details.length > 0 ? (
+                                                        item.serial_details.map((serial, idx) => (
+                                                            <View key={`${item.ref_trans_id}-${idx}`} style={styles.expandedItems}>
+                                                                <View style={styles.bodyColumnPKG}>
+                                                                    <Text style={styles.expandedValue}></Text>
+                                                                </View>
+                                                                <View style={styles.bodyColumnCOMP}>
+                                                                    <Text style={styles.expandedValue}></Text>
+                                                                </View>
+                                                                <View style={styles.bodyColumn1}>
+                                                                    <Text style={styles.expandedValue}>{serial.batch_no || 'N/A'}</Text>
+                                                                </View>
+                                                                <View style={styles.bodyColumn2}>
+                                                                    <Text style={styles.expandedValue}>{serial.ser_bat_no || 'N/A'}</Text>
+                                                                </View>
+                                                                <View style={styles.bodyColumn3}>
+                                                                    <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text>
+
+                                                                </View>
+                                                                <View style={styles.bodyColumn4}>
+                                                                    <Text style={styles.expandedValue}>{serial.uom_code || 'N/A'}</Text>
+                                                                </View>
+
+                                                            </View>
+                                                        ))
+                                                    ) : (
+                                                        <View style={styles.expandedItems}>
+                                                            <Text style={styles.expandedValue}>No serial details available</Text>
+                                                        </View>
+                                                    )
+                                                }
+
+                                            </>
+                                        )
+                                    }
+                                </View>
+                            ))}
+                            <View style={styles.ticketFooter}>
+                                <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
+                            </View>
+                        </>
+                    )}
                 </View>
             </View>
 
@@ -360,7 +233,7 @@ export default function OutslipUpload() {
                 <View style={styles.imageContainer}>
                     <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
                         <View style={styles.ticketHeader}>
-                            <Text style={styles.tripId}>Uploaded Signed ASN</Text>
+                            <Text style={styles.tripId}>Uploaded Images</Text>
                         </View>
                     </TouchableOpacity>
                     {isExpanded2 && (
@@ -677,17 +550,49 @@ const styles = StyleSheet.create({
     bodyLabel: {
         fontSize: 10
     },
-    bodyColumn1: {
-        width: '30%',
+    bodyLabelQTY: {
+        fontSize: 11,
+        /*  fontWeight: 'bold', */
+        /* borderWidth: 1, */
+        textAlign: 'center',
+
     },
-    bodyColumn2: {
-        width: '45%',
+    bodyColumn1: { //barcode
+        width: '25%',
+    },
+    bodyColumn2: { // description
+        width: '30%',
     },
     bodyColumn3: {
         width: '10%',
+        alignContent: 'center',
     },
     bodyColumn4: {
         width: '10%',
-        marginLeft: 20
-    }
+        /* marginLeft: 20 */
+    },
+
+    bodyColumnPKG: {
+        width: '10%',
+        /* marginLeft: 20 */
+    },
+    bodyColumnCOMP: {
+        width: '15%',
+        /* marginLeft: 20 */
+    },
+    expandedItems: {
+        backgroundColor: '#ffd33d',
+        flexDirection: 'row',
+        padding: 5,
+        borderWidth: 0.5,
+    },
+    expandedLabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#000',
+    },
+    expandedValue: {
+        fontSize: 10,
+        color: '#000',
+    },
 });

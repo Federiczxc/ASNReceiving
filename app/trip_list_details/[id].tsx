@@ -27,6 +27,7 @@ interface TripDetails {
     document_amount: number;
     ref_trans_date: Date;
     ref_trans_id: number;
+    ref_trans_no: string;
     branch_name: string;
     barcode: string;
     item_description: string;
@@ -321,7 +322,7 @@ export default function TripListDetails() {
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_id}</Text>
+                                <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_no}</Text>
                                 <Text style={styles.tripId2}>Trip Ticket Detail #{item.trip_ticket_detail_id}</Text>
                                 <Text style={styles.footerText}>{format(new Date(item.ref_trans_date), 'MMM dd, yyyy')}</Text>
                             </View>
