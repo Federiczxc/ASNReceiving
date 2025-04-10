@@ -48,19 +48,19 @@ export default function RootLayout() {
           <Stack.Screen
             name="manage_upload/manage_upload"
             options={{
-              title: 'Manage Uploads', // Set the title here
+              title: 'View Uploads', // Set the title here
             }}
           />
           <Stack.Screen
             name="manage_upload/[id]"
             options={{
-              title: 'View Uploads', // Set the title here
+              title: 'View Upload', // Set the title here
             }}
           />
           <Stack.Screen
             name="manage_attendance/manage_attendance"
             options={{
-              title: 'Manage Attendance', // Set the title here
+              title: 'View Attendance', // Set the title here
             }}
           />
         </Stack>

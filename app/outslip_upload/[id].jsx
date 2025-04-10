@@ -492,7 +492,7 @@ export default function OutslipUpload() {
 
     return (
         <SafeAreaProvider>
-            
+
 
             <SafeAreaView style={styles.container}>
 
@@ -696,7 +696,7 @@ export default function OutslipUpload() {
 
                                             </View>
                                         ))}
-                                        
+
                                     </View>
                                     <View style={styles.ticketFooter}>
                                         <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
@@ -704,37 +704,39 @@ export default function OutslipUpload() {
                                 </>
                             )}
                             <Modal
-                animationType="fade"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}>
-                {/* Outer container that covers entire screen */}
-                <View style={styles.modalOverlay}>
-                    {/* Centered content container */}
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalText}>
-                            Are you sure you want to upload? Once uploaded, you can't make any changes. 
-                        </Text>
+                                animationType="fade"
+                                transparent={true}
+                                visible={modalVisible}
+                                onRequestClose={() => setModalVisible(false)}>
+                                {/* Outer container that covers entire screen */}
+                                <View style={styles.modalOverlay}>
+                                    {/* Centered content container */}
+                                    <View style={styles.modalContent}>
+                                        <Text style={styles.modalText}>
+                                            Are you sure you want to upload? Once uploaded, you can't make any changes.
+                                        </Text>
 
-                        <View style={styles.modalButtonsContainer}>
-                            <Pressable
-                                style={[styles.modalButton, styles.cancelButton]}
-                                onPress={() => setModalVisible(false)}>
-                                <Text style={styles.modalButtonText}>Cancel</Text>
-                            </Pressable>
+                                        <View style={styles.modalButtonsContainer}>
+                                            <TouchableOpacity
+                                                style={[styles.modalButton, styles.cancelButton]}
+                                                onPress={() => setModalVisible(false)}
+                                                activeOpacity={0.7}>
+                                                <Text style={styles.modalButtonText}>Cancel</Text>
+                                            </TouchableOpacity>
 
-                            <Pressable
-                                style={[styles.modalButton, styles.confirmButton]}
-                                onPress={() => {
-                                    setModalVisible(false);
-                                    handleSubmit();
-                                }}>
-                                <Text style={styles.modalButtonText}>Confirm</Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                                            <TouchableOpacity
+                                                style={[styles.modalButton, styles.confirmButton]}
+                                                onPress={() => {
+                                                    setModalVisible(false);
+                                                    handleSubmit();
+                                                }}
+                                                activeOpacity={0.7}>
+                                                <Text style={styles.modalButtonText}>Confirm</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                </View>
+                            </Modal>
                         </View>
                     </View>
 
@@ -756,9 +758,9 @@ export default function OutslipUpload() {
                         </TouchableOpacity>
                     </View>
                 </View> */}
-                
+
                     <View style={styles.container2}>
-                        
+
                         <View style={styles.imageContainer}>
 
                             <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
@@ -1311,7 +1313,7 @@ const styles = StyleSheet.create({
     bodyColumn4: {
         width: '10%',
         /* marginLeft: 20 */
-        
+
     },
 
     bodyColumnPKG: {

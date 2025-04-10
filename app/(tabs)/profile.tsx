@@ -88,14 +88,14 @@ export default function Profile() {
             <View style={styles.ticketContainer}>
                 <TouchableOpacity onPress={() => router.push('/manage_upload/manage_upload')} activeOpacity={0.7}>
                     <View style={styles.ticketHeader}>
-                        <Text style={styles.tripId}>Manage Uploads</Text>
+                        <Text style={styles.tripId}>View Uploads</Text>
                     </View>
                 </TouchableOpacity>
             </View>
             <View style={styles.ticketContainer}>
                 <TouchableOpacity onPress={() => router.push('/manage_attendance/manage_attendance')} activeOpacity={0.7}>
                     <View style={styles.ticketHeader}>
-                        <Text style={styles.tripId}>Manage Attendance</Text>
+                        <Text style={styles.tripId}>View Attendance</Text>
                     </View>
                 </TouchableOpacity>
             </View>
