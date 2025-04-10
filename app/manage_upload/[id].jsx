@@ -150,8 +150,8 @@ export default function OutslipUpload() {
                                             <View style={styles.tableBody}>
                                                 <View style={styles.bodyColumnPKG}>
                                                     <Checkbox
-                                                        value={item.main_item === 1}
-                                                        color={item.main_item === 1 ? '#4CAF50' : undefined}
+                                                        value={item.main_item === true}
+                                                        color={item.main_item === true ? '#4CAF50' : undefined}
                                                     />
                                                 </View>
                                                 <View style={styles.bodyColumnCOMP}>
@@ -199,7 +199,7 @@ export default function OutslipUpload() {
                                                                     <Text style={styles.expandedValue}>{serial.ser_bat_no || 'N/A'}</Text>
                                                                 </View>
                                                                 <View style={styles.bodyColumn3}>
-                                                                    <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text>
+                                                                    <Text style={styles.expandedValue}>{serial.received_qty || '0'}</Text>
 
                                                                 </View>
                                                                 <View style={styles.bodyColumn4}>

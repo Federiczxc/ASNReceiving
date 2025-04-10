@@ -65,6 +65,7 @@ class TripDetailsModel(models.Model):
     branch_charges = models.DecimalField(max_digits=18, decimal_places=2)
     document_amount = models.DecimalField(max_digits=18, decimal_places=2)
     detail_volume = models.DecimalField(max_digits=18, decimal_places=6)
+    is_posted = models.BooleanField()
     
     
     class Meta:
@@ -167,3 +168,32 @@ class TripTicketBranchLogsModel(models.Model):
             models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='branch_logs_composite_pk') #not working so manual it sa mssql
         ]
 """
+
+class TripTicketDetailReceivingModel:
+    server_id = models.BigIntegerField(default=1)
+    trip_ticket_id = models.BigIntegerField() 
+    trip_ticket_detail_id = models.BigIntegerField()
+    ref_trans_id = models.BigIntegerField()
+    ref_trans_no = models.CharField(max_length=255, null=True)
+    trans_code_id = models.BigIntegerField(null=True)
+    item_id = models.BigIntegerField()
+    item_qty = models.BigIntegerField()
+    doc_qty = models.BigIntegerField()
+    ref_trans_detail_id = models.BigIntegerField()
+    ref_trans_detail_pkg_id = models.BigIntegerField(default=0)
+    i_trans_no = models.BigIntegerField()
+    p_trans_no = models.BigIntegerField()
+    main_item = models.SmallIntegerField()
+    component_item = models.SmallIntegerField()
+    ser_bat_no = models.CharField(max_length=255, null=True)
+    batch_no = models.CharField(max_length=255, null=True)
+    serbat_id = models.BigIntegerField()
+    created_by = models.BigIntegerField()
+    created_date = models.DateTimeField()
+    updated_by = models.BigIntegerField(null=True)
+    updated_date = models.DateTimeField(null=True)
+    posted_by = models.BigIntegerField(null=True)
+    posted_date = models.DateTimeField(null=True)
+    is_fap = models.BooleanField(default=False)
+    is_candis = models.BooleanField(default=False)
+    is_posted = models.BooleanField(default=False)

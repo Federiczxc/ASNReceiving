@@ -119,9 +119,15 @@ export default function ManageAttendance() {
                         renderItem={({ item }) => (
                             <View style={styles.ticketContainer}>
                                 <View style={styles.ticketHeader}>
-                                    <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
-                                    <Text style={styles.footerText}> Trip Ticket ID: {item.trip_ticket_id} </Text>
-                                    <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
+                                    <TouchableOpacity onPress={() => router.push({
+                                        pathname: '/trip_list_details/[id]',
+                                        params: { id: item.branch_details.branch_id, trip_ticket_id: item.trip_ticket_id },
+                                    })}>
+
+                                        <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
+                                        <Text style={styles.footerText}> Trip Ticket ID: {item.trip_ticket_id} </Text>
+                                        <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
+                                    </TouchableOpacity>
                                 </View>
                                 <View style={styles.ticketBody}>
                                     <View style={styles.infoSection}>
@@ -219,6 +225,7 @@ const styles = StyleSheet.create({
     ticketFooter: {
         backgroundColor: '#4caf50',
         padding: 10,
+        borderWidth: 0.5,
     },
     footerText: {
         fontSize: 14,

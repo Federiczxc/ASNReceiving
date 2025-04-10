@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable } from 'react-native';
+import { View, Text, Button, Modal, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location'
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -10,7 +10,8 @@ import Carousel from 'react-native-reanimated-carousel';
 import { Notifier, Easing } from 'react-native-notifier';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import Checkbox from 'expo-checkbox'
+import Checkbox from 'expo-checkbox';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
         branch_name: '',
@@ -68,11 +69,13 @@ export default function OutslipUpload() {
     const [permission, requestPermission] = useCameraPermissions();
     const [isCameraMode, setIsCameraMode] = useState(false);
     const [quantity, setQuantity] = useState({});
+    const [serialQuantities, setSerialQuantities] = useState({});
+
     const [isCameraFullscreen, setIsCameraFullscreen] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
     const [cameraPreview, setCameraPreview] = useState(false);
     const [isChecked, setChecked] = useState(false);
-
+    const [modalVisible, setModalVisible] = useState(false);
     useEffect(() => {
         setIsLoading(true);
         const checkPermissions = async () => {
@@ -89,10 +92,20 @@ export default function OutslipUpload() {
                     },
                 });
                 const initialQuantities = {};
+                const initialSerialQuantities = {};
+
                 response.data.tripdetails[0].items.forEach(item => {
                     initialQuantities[item.item_id] = Math.round(Number(item.item_qty)).toString();
+
+                    if (Array.isArray(item.serial_details)) {
+                        item.serial_details.forEach(serial => {
+                            initialSerialQuantities[serial.serbat_id] = Math.round(Number(serial.item_qty)).toString();
+
+                        });
+                    }
                 });
-                setQuantity(initialQuantities)
+                setQuantity(initialQuantities);
+                setSerialQuantities(initialSerialQuantities);
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
                 console.log("out", response.data.tripdetails[0]);
@@ -280,12 +293,16 @@ export default function OutslipUpload() {
         setIsExpandedItems(prev => (Object.assign(Object.assign({}, prev), { [itemId]: !prev[itemId] })));
     };
     const handleSubmit = async () => {
-         const hasImages = images.some(img => img !== null);
-         if (!hasImages) {
-             Alert.alert('Error', 'Please capture at least one image before submitting');
-             setIsLoading(false);
-             return;
-         }
+        const hasImages = images.some(img => img !== null);
+        if (!hasImages) {
+            Alert.alert('Error', 'Please capture at least one image before submitting');
+            setIsLoading(false);
+            return;
+        }
+
+        /*  Object.entries(serialQuantities).forEach(([serbat_id, qty]) => {
+             formData.append(`serials[${serbat_id}]`, qty);
+         }); */
         setIsLoading(true);
         const accessToken = await AsyncStorage.getItem('access_token');
         const userData = await AsyncStorage.getItem('user_data');
@@ -335,6 +352,47 @@ export default function OutslipUpload() {
                 })
                 console.log('ti', clockInResponse)
             }
+            const receivingData = outslipDetail.items.flatMap(item => {
+                if (!Array.isArray(item.serial_details)) return [];
+
+                return item.serial_details.map(serial => ({
+                    server_id: 1,
+                    trip_ticket_id: outslipDetail.trip_ticket_id,
+                    trip_ticket_detail_id: outslipDetail.trip_ticket_detail_id,
+                    ref_trans_id: outslipDetail.ref_trans_id,
+                    ref_trans_no: outslipDetail.ref_trans_no,
+                    trans_code_id: outslipDetail.ref_trans_code_id,
+                    item_id: item.item_id,
+                    item_qty: Number(serialQuantities[serial.serbat_id] || serial.item_qty),
+                    doc_qty: item.item_qty,
+                    ref_trans_detail_id: item.ref_trans_detail_id,
+                    ref_trans_detail_pkg_id: item.ref_trans_detail_pkg_id,
+                    i_trans_no: serial.i_trans_no,
+                    p_trans_no: serial.p_trans_no,
+                    main_item: item.main_item,
+                    component_item: item.component_item,
+                    ser_bat_no: serial.ser_bat_no,
+                    batch_no: serial.batch_no,
+                    serbat_id: serial.serbat_id,
+                    created_by: userId,
+                    created_date: new Date().toISOString(),
+                    updated_by: userId,
+                    updated_date: new Date().toISOString(),
+                }));
+            });
+            const receivingForm = new FormData();
+            receivingForm.append('receiving_data', JSON.stringify(receivingData));
+            console.log("erere", receivingData);
+            console.log("recrec", receivingForm);
+
+
+            const receivingResponse = await api.post('/trip-ticket-receive/', receivingForm, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+            console.log('succrecv', receivingResponse);
 
             //UPLOADING SIDE
             const formData = new FormData();
@@ -359,7 +417,7 @@ export default function OutslipUpload() {
 
             /* Watermarked formdata */
             formData.append('branch_name', tripBranch.branch_name);
-            formData.append('ref_trans_id', outslipDetail.ref_trans_id);
+            formData.append('ref_trans_no', outslipDetail.ref_trans_no);
             formData.append('trans_name', outslipDetail.trans_name);
             formData.append('username', username);
             if (Array.isArray(ocrResults)) {
@@ -383,7 +441,7 @@ export default function OutslipUpload() {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${accessToken}`,
                 },
-                
+
 
             });
             Notifier.showNotification({
@@ -418,6 +476,7 @@ export default function OutslipUpload() {
                 });
 
                 Alert.alert('Upload Failed', JSON.stringify(error.response.data));
+                return;
             }
             if (error.response.status === 401) {
                 Alert.alert('Error', 'Your login session has expired. Please log in');
@@ -432,131 +491,134 @@ export default function OutslipUpload() {
 
 
     return (
+        <SafeAreaProvider>
+            
 
-        <View style={styles.container} >
-            {isCameraFullscreen && (
-                <View style={styles.fullscreenCameraContainer}>
-                    <CameraView
-                        style={styles.fullscreenCamera}
-                        ref={(ref) => setCameraRef(ref)} />
-                    <TouchableOpacity
-                        style={styles.captureButton}
-                        onPress={takePicture}
-                    >
-                        <Ionicons color='hsl(0,0%,90%)' name='camera-sharp' style={{ alignSelf: 'center' }} size={42} />
-                        {/* <Text style={styles.captureButtonText}>Capture</Text> */}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.closeButton}
-                        onPress={() => setIsCameraFullscreen(false)}>
-                        <Ionicons color='hsl(0,0%,90%)' name='close-outline' size={42} />
-                        {/*<Text style={styles.closeButtonText}>Close</Text> */}
-                    </TouchableOpacity>
-                </View>
-            )}
-            {cameraPreview && !isCameraFullscreen && (
-                <View
-                    style={styles.fullscreenPreviewContainer}
-                >
-                    <Image source={{ uri: capturedImage }} style={styles.fullscreenPreviewImage} />
-                    <TouchableOpacity
-                        onPress={retakePicture}
-                        style={styles.retakeButton}
+            <SafeAreaView style={styles.container}>
 
-                    >
-                        <Ionicons color='hsl(0,0%,90%)' name={"trash-outline"} size={36} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => saveCapturedPicture(currentIndex)}
-                        style={styles.checkButton}
-                    >
-                        <Ionicons color='hsl(0,0%,90%)' name={"checkmark-outline"} size={42} />
-
-                    </TouchableOpacity>
-                </View>
-
-            )}
-            <ScrollView>
-
-                {isLoading && (
-                    <BlurView intensity={400} style={styles.overlayLoading} >
-                        <ActivityIndicator size="large" color="#4CAF50" />
-                    </BlurView>
-                )}
-                <View style={styles.container1}>
-                    <View style={styles.ticketContainer}>
-                        <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
-                            <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_no}</Text>
-                                <Text style={styles.tripId2}>Trip Ticket Detail #{outslipDetail.trip_ticket_detail_id}</Text>
-                                <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
-                            </View>
-                            <Ionicons
-                                name={isExpanded ? "chevron-down" : "chevron-forward"}
-                                size={20}
-                                color="#666"
-                                style={{ alignSelf: 'center' }}
-                            />
+                {isCameraFullscreen && (
+                    <View style={styles.fullscreenCameraContainer}>
+                        <CameraView
+                            style={styles.fullscreenCamera}
+                            ref={(ref) => setCameraRef(ref)} />
+                        <TouchableOpacity
+                            style={styles.captureButton}
+                            onPress={takePicture}
+                        >
+                            <Ionicons color='hsl(0,0%,90%)' name='camera-sharp' style={{ alignSelf: 'center' }} size={42} />
+                            {/* <Text style={styles.captureButtonText}>Capture</Text> */}
                         </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => setIsCameraFullscreen(false)}>
+                            <Ionicons color='hsl(0,0%,90%)' name='close-outline' size={42} />
+                            {/*<Text style={styles.closeButtonText}>Close</Text> */}
+                        </TouchableOpacity>
+                    </View>
+                )}
+                {cameraPreview && !isCameraFullscreen && (
+                    <View
+                        style={styles.fullscreenPreviewContainer}
+                    >
+                        <Image source={{ uri: capturedImage }} style={styles.fullscreenPreviewImage} />
+                        <TouchableOpacity
+                            onPress={retakePicture}
+                            style={styles.retakeButton}
 
-                        {isExpanded && (
-                            <>
-                                <View style={styles.ticketBody}>
-                                    <View style={styles.tableHeader}>
-                                        <View style={{ width: '10%', paddingLeft: 3 }}>
+                        >
+                            <Ionicons color='hsl(0,0%,90%)' name={"trash-outline"} size={36} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => saveCapturedPicture(currentIndex)}
+                            style={styles.checkButton}
+                        >
+                            <Ionicons color='hsl(0,0%,90%)' name={"checkmark-outline"} size={42} />
 
-                                            <Text style={styles.headerLabel}>PKG</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                )}
+                <ScrollView>
+
+                    {isLoading && (
+                        <BlurView intensity={400} style={styles.overlayLoading} >
+                            <ActivityIndicator size="large" color="#4CAF50" />
+                        </BlurView>
+                    )}
+                    <View style={styles.container1}>
+                        <View style={styles.ticketContainer}>
+                            <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} activeOpacity={0.7}>
+                                <View style={styles.ticketHeader}>
+                                    <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_no}</Text>
+                                    <Text style={styles.tripId2}>Trip Ticket Detail #{outslipDetail.trip_ticket_detail_id}</Text>
+                                    <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
+                                </View>
+                                <Ionicons
+                                    name={isExpanded ? "chevron-down" : "chevron-forward"}
+                                    size={20}
+                                    color="#666"
+                                    style={{ alignSelf: 'center' }}
+                                />
+                            </TouchableOpacity>
+
+                            {isExpanded && (
+                                <>
+                                    <View style={styles.ticketBody}>
+                                        <View style={styles.tableHeader}>
+                                            <View style={{ width: '10%', paddingLeft: 3 }}>
+
+                                                <Text style={styles.headerLabel}>PKG</Text>
+                                            </View>
+                                            <View style={{ width: '15%' }}>
+
+                                                <Text style={styles.headerLabel}>COMP</Text>
+                                            </View>
+                                            <View style={{ width: '25%' }}>
+                                                <Text style={styles.headerLabel}>Barcode</Text>
+                                            </View>
+                                            <View style={{ width: '30%' }}>
+
+                                                <Text style={styles.headerLabel}>Description</Text>
+                                            </View>
+                                            <View style={{ width: '10%' }}>
+
+                                                <Text style={styles.headerLabel}>QTY</Text>
+                                            </View>
+                                            <View style={{ width: '10%' }}>
+
+                                                <Text style={styles.headerLabel}>UOM</Text>
+                                            </View>
+
                                         </View>
-                                        <View style={{ width: '15%' }}>
 
-                                            <Text style={styles.headerLabel}>COMP</Text>
-                                        </View>
-                                        <View style={{ width: '25%' }}>
-                                            <Text style={styles.headerLabel}>Barcode</Text>
-                                        </View>
-                                        <View style={{ width: '30%' }}>
+                                        {outslipDetail.items.map((item) => (
+                                            <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                                <>
+                                                    <TouchableOpacity onPress={() => toggleItemExpansion(item.item_id)} activeOpacity={0.7}>
 
-                                            <Text style={styles.headerLabel}>Description</Text>
-                                        </View>
-                                        <View style={{ width: '10%' }}>
+                                                        <View style={styles.tableBody}>
+                                                            <View style={styles.bodyColumnPKG}>
+                                                                <Checkbox
+                                                                    value={item.main_item === true}
+                                                                    color={item.main_item === true ? '#4CAF50' : undefined}
+                                                                />
+                                                            </View>
+                                                            <View style={styles.bodyColumnCOMP}>
+                                                                <Checkbox
+                                                                    value={item.component_item === 1}
+                                                                    color={item.component_item === 1 ? '#4CAF50' : undefined}
+                                                                />
+                                                            </View>
+                                                            <View style={styles.bodyColumn1}>
+                                                                <Text style={styles.bodyLabel}>{item.barcode}</Text>
+                                                            </View>
+                                                            <View style={styles.bodyColumn2}>
 
-                                            <Text style={styles.headerLabel}>QTY</Text>
-                                        </View>
-                                        <View style={{ width: '10%' }}>
+                                                                <Text style={styles.bodyLabel}>{item.item_description}</Text>
+                                                            </View>
+                                                            <View style={styles.bodyColumn3}>
 
-                                            <Text style={styles.headerLabel}>UOM</Text>
-                                        </View>
-
-                                    </View>
-
-                                    {outslipDetail.items.map((item) => (
-                                        <View key={`${item.item_id}-${item.ref_trans_id}`}>
-                                            <>
-                                                <TouchableOpacity onPress={() => toggleItemExpansion(item.item_id)} activeOpacity={0.7}>
-
-                                                    <View style={styles.tableBody}>
-                                                        <View style={styles.bodyColumnPKG}>
-                                                            <Checkbox
-                                                                value={item.main_item === 1}
-                                                                color={item.main_item === 1 ? '#4CAF50' : undefined}
-                                                            />
-                                                        </View>
-                                                        <View style={styles.bodyColumnCOMP}>
-                                                            <Checkbox
-                                                                value={item.component_item === 1}
-                                                                color={item.component_item === 1 ? '#4CAF50' : undefined}
-                                                            />
-                                                        </View>
-                                                        <View style={styles.bodyColumn1}>
-                                                            <Text style={styles.bodyLabel}>{item.barcode}</Text>
-                                                        </View>
-                                                        <View style={styles.bodyColumn2}>
-
-                                                            <Text style={styles.bodyLabel}>{item.item_description}</Text>
-                                                        </View>
-                                                        <View style={styles.bodyColumn3}>
-
-                                                            {/*  <TextInput style={styles.bodyLabelQTY}
+                                                                {/* <TextInput style={styles.bodyLabelQTY}
                                                                 keyboardType='numeric'
                                                                 maxLength={10}
                                                                 onChangeText={(text) => {
@@ -568,69 +630,115 @@ export default function OutslipUpload() {
                                                                 value={quantity[item.item_id] || ''}
                                                                 placeholder={Math.round(Number(item.item_qty)).toString()}
                                                             /> */}
-                                                            <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))}</Text>
+                                                                <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))}</Text>
+
+                                                            </View>
+                                                            <View style={styles.bodyColumn4}>
+
+                                                                <Text style={styles.bodyLabel}>{item.uom_code}</Text>
+                                                            </View>
                                                         </View>
-                                                        <View style={styles.bodyColumn4}>
+                                                    </TouchableOpacity>
+                                                </>
 
-                                                            <Text style={styles.bodyLabel}>{item.uom_code}</Text>
-                                                        </View>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            </>
+                                                {
 
-                                            {
+                                                    isExpandedItems[item.item_id] && (
+                                                        <>
+                                                            {
+                                                                Array.isArray(item.serial_details) && item.serial_details.length > 0 ? (
+                                                                    item.serial_details.map((serial, idx) => (
+                                                                        <View key={`${item.ref_trans_id}-${idx}`} style={styles.expandedItems}>
+                                                                            <View style={styles.bodyColumnPKG}>
+                                                                                <Text style={styles.expandedValue}></Text>
+                                                                            </View>
+                                                                            <View style={styles.bodyColumnCOMP}>
+                                                                                <Text style={styles.expandedValue}></Text>
+                                                                            </View>
+                                                                            <View style={styles.bodyColumn1}>
+                                                                                <Text style={styles.expandedValue}>{serial.batch_no || 'N/A'}</Text>
+                                                                            </View>
+                                                                            <View style={styles.bodyColumn2}>
+                                                                                <Text style={styles.expandedValue}>{serial.ser_bat_no || 'N/A'}</Text>
+                                                                            </View>
+                                                                            <View style={styles.bodyColumn3}>
+                                                                                <TextInput style={styles.expandedQty}
+                                                                                    maxLength={10}
+                                                                                    keyboardType='numeric'
+                                                                                    onChangeText={(text) => {
+                                                                                        setSerialQuantities(prev => ({
+                                                                                            ...prev,
+                                                                                            [serial.serbat_id]: text
+                                                                                        }));
+                                                                                    }}
+                                                                                    value={serialQuantities[serial.serbat_id] || ''}
+                                                                                    placeholder={Math.round(Number(serial.item_qty)).toString()}
+                                                                                />
+                                                                                {/* <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text> */}
 
-                                                isExpandedItems[item.item_id] && (
-                                                    <>
-                                                        {
-                                                            Array.isArray(item.serial_details) && item.serial_details.length > 0 ? (
-                                                                item.serial_details.map((serial, idx) => (
-                                                                    <View key={`${item.ref_trans_id}-${idx}`} style={styles.expandedItems}>
-                                                                        <View style={styles.bodyColumnPKG}>
-                                                                            <Text style={styles.expandedValue}></Text>
-                                                                        </View>
-                                                                        <View style={styles.bodyColumnCOMP}>
-                                                                            <Text style={styles.expandedValue}></Text>
-                                                                        </View>
-                                                                        <View style={styles.bodyColumn1}>
-                                                                            <Text style={styles.expandedValue}>{serial.batch_no || 'N/A'}</Text>
-                                                                        </View>
-                                                                        <View style={styles.bodyColumn2}>
-                                                                            <Text style={styles.expandedValue}>{serial.ser_bat_no || 'N/A'}</Text>
-                                                                        </View>
-                                                                        <View style={styles.bodyColumn3}>
-                                                                            <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text>
+                                                                            </View>
+                                                                            <View style={styles.bodyColumn4}>
+                                                                                <Text style={styles.expandedValue}>{serial.uom_code || 'N/A'}</Text>
+                                                                            </View>
 
                                                                         </View>
-                                                                        <View style={styles.bodyColumn4}>
-                                                                            <Text style={styles.expandedValue}>{serial.uom_code || 'N/A'}</Text>
-                                                                        </View>
-
+                                                                    ))
+                                                                ) : (
+                                                                    <View style={styles.expandedItems}>
+                                                                        <Text style={styles.expandedValue}>No serial details available</Text>
                                                                     </View>
-                                                                ))
-                                                            ) : (
-                                                                <View style={styles.expandedItems}>
-                                                                    <Text style={styles.expandedValue}>No serial details available</Text>
-                                                                </View>
-                                                            )
-                                                        }
+                                                                )
+                                                            }
 
-                                                    </>
-                                                )
-                                            }
+                                                        </>
+                                                    )
+                                                }
 
-                                        </View>
-                                    ))}
-                                </View>
-                                <View style={styles.ticketFooter}>
-                                    <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
-                                </View>
-                            </>
-                        )}
+                                            </View>
+                                        ))}
+                                        
+                                    </View>
+                                    <View style={styles.ticketFooter}>
+                                        <Text style={styles.footerText}>Remarks: {outslipDetail.remarks}</Text>
+                                    </View>
+                                </>
+                            )}
+                            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}>
+                {/* Outer container that covers entire screen */}
+                <View style={styles.modalOverlay}>
+                    {/* Centered content container */}
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalText}>
+                            Are you sure you want to upload? Once uploaded, you can't make any changes. 
+                        </Text>
+
+                        <View style={styles.modalButtonsContainer}>
+                            <Pressable
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setModalVisible(false)}>
+                                <Text style={styles.modalButtonText}>Cancel</Text>
+                            </Pressable>
+
+                            <Pressable
+                                style={[styles.modalButton, styles.confirmButton]}
+                                onPress={() => {
+                                    setModalVisible(false);
+                                    handleSubmit();
+                                }}>
+                                <Text style={styles.modalButtonText}>Confirm</Text>
+                            </Pressable>
+                        </View>
                     </View>
                 </View>
+            </Modal>
+                        </View>
+                    </View>
 
-                {/*     <View style={styles.container2}>
+                    {/*     <View style={styles.container2}>
                     <View style={styles.imageContainer}>
                         <TouchableOpacity
                             style={styles.toggleButton}
@@ -648,36 +756,38 @@ export default function OutslipUpload() {
                         </TouchableOpacity>
                     </View>
                 </View> */}
-                <View style={styles.container2}>
-                    <View style={styles.imageContainer}>
+                
+                    <View style={styles.container2}>
+                        
+                        <View style={styles.imageContainer}>
 
-                        <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
-                            <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Upload Images</Text>
-                            </View>
+                            <TouchableOpacity onPress={() => setIsExpanded2(!isExpanded2)} activeOpacity={0.7}>
+                                <View style={styles.ticketHeader}>
+                                    <Text style={styles.tripId}>Upload Images</Text>
+                                </View>
 
-                        </TouchableOpacity>
-                        {isExpanded2 && (
-                            <>
-                                <Carousel
-                                    key={images.length}
-                                    loop={false}
-                                    width={Dimensions.get('window').width * 1}
-                                    height={Dimensions.get('window').height * 0.5}
-                                    data={images}
-                                    scrollAnimationDuration={200}
-                                    onProgressChange={(_, absoluteProgress) => {
-                                        const newIndex = Math.round(absoluteProgress);
-                                        setCurrentIndex(newIndex);
-                                        setEditableOcrText(ocrResults[newIndex] || '');
-                                    }}
-                                    style={styles.carouselView}
-                                    renderItem={({ index }) => (
-                                        <>
+                            </TouchableOpacity>
+                            {isExpanded2 && (
+                                <>
+                                    <Carousel
+                                        key={images.length}
+                                        loop={false}
+                                        width={Dimensions.get('window').width * 1}
+                                        height={Dimensions.get('window').height * 0.5}
+                                        data={images}
+                                        scrollAnimationDuration={200}
+                                        onProgressChange={(_, absoluteProgress) => {
+                                            const newIndex = Math.round(absoluteProgress);
+                                            setCurrentIndex(newIndex);
+                                            setEditableOcrText(ocrResults[newIndex] || '');
+                                        }}
+                                        style={styles.carouselView}
+                                        renderItem={({ index }) => (
+                                            <>
 
-                                            {/* Image Preview & OCR Result Card */}
-                                            <View style={styles.ocrCard}>
-                                                {/*  {ocrResults.length > 0 && (
+                                                {/* Image Preview & OCR Result Card */}
+                                                <View style={styles.ocrCard}>
+                                                    {/*  {ocrResults.length > 0 && (
                                                     <>
                                                         <Text style={styles.ocrTitle}>OCR Result:</Text>
                                                         <TextInput
@@ -694,34 +804,34 @@ export default function OutslipUpload() {
                                                     </>
                                                 )}
                                                     */}
-                                                <Text style={styles.ocrTitle}>Remarks:</Text>
-                                                <TextInput
-                                                    style={styles.textOutput}
-                                                    value={remarks[currentIndex] || ''}
-                                                    onChangeText={(text) => {
-                                                        let newRemarks = [...remarks];
-                                                        newRemarks[currentIndex] = text;
-                                                        setRemarks(newRemarks)
-                                                    }}
-                                                    multiline
-                                                />
-                                            </View>
-                                            <View style={styles.imageView}>
-                                                <TouchableOpacity onPress={() => setIsCameraFullscreen(true)} activeOpacity={0.7} style={styles.imageCard}>
-                                                    {images[index] ? (
-                                                        <>
-                                                            <Image source={{ uri: images[index] }} style={styles.image} />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Ionicons color='hsl(0, 0%, 50%)' name='camera-outline' size={40} />
-                                                            <Text style={styles.placeholder}>No image captured. Tap to take a picture</Text>
-                                                        </>
-                                                    )}
-                                                </TouchableOpacity>
-                                            </View>
+                                                    <Text style={styles.ocrTitle}>Remarks:</Text>
+                                                    <TextInput
+                                                        style={styles.textOutput}
+                                                        value={remarks[currentIndex] || ''}
+                                                        onChangeText={(text) => {
+                                                            let newRemarks = [...remarks];
+                                                            newRemarks[currentIndex] = text;
+                                                            setRemarks(newRemarks)
+                                                        }}
+                                                        multiline
+                                                    />
+                                                </View>
+                                                <View style={styles.imageView}>
+                                                    <TouchableOpacity onPress={() => setIsCameraFullscreen(true)} activeOpacity={0.7} style={styles.imageCard}>
+                                                        {images[index] ? (
+                                                            <>
+                                                                <Image source={{ uri: images[index] }} style={styles.image} />
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Ionicons color='hsl(0, 0%, 50%)' name='camera-outline' size={40} />
+                                                                <Text style={styles.placeholder}>No image captured. Tap to take a picture</Text>
+                                                            </>
+                                                        )}
+                                                    </TouchableOpacity>
+                                                </View>
 
-                                            {/* 
+                                                {/* 
                                             {isCameraMode ? (
                                                 <View style={styles.cameraContainer}>
                                                     {images[index] ? (
@@ -747,47 +857,91 @@ export default function OutslipUpload() {
                                                     )}le
                                                 </TouchableOpacity>
                                             </View>)} */}
-                                        </>
-                                    )} />
-                                <View style={styles.paginationContainer}>
-                                    {images.map((_, i) => (
-                                        <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
-                                    ))}
-                                </View>
+                                            </>
+                                        )} />
+                                    <View style={styles.paginationContainer}>
+                                        {images.map((_, i) => (
+                                            <View key={i} style={[styles.dot, currentIndex === i ? styles.activeDot : null]} />
+                                        ))}
+                                    </View>
 
-                                <View style={styles.buttonContainer}>
-                                    {/* <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
+                                    <View style={styles.buttonContainer}>
+                                        {/* <TouchableOpacity style={styles.button} onPress={() => handleOCR(currentIndex)}>
                                         <Text style={styles.buttonText}>Extract Text</Text>
                                     </TouchableOpacity> */}
 
 
-                                    <TouchableOpacity style={styles.button} onPress={addNewSlide}>
-                                        <Text style={styles.buttonText}>Add Slide</Text>
+                                        <TouchableOpacity style={styles.button} onPress={addNewSlide}>
+                                            <Text style={styles.buttonText}>Add Slide</Text>
 
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
+                                            <Text style={styles.buttonText}>Remove Slide</Text>
+                                        </TouchableOpacity>
+
+                                    </View>
+                                    <TouchableOpacity style={styles.button2} onPress={() => setModalVisible(true)}>
+                                        <Text style={styles.buttonText} >Submit</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={styles.button} onPress={() => removeSlide(currentIndex)}>
-                                        <Text style={styles.buttonText}>Remove Slide</Text>
-                                    </TouchableOpacity>
+                                </>
+                            )}
 
-                                </View>
-                                <TouchableOpacity style={styles.button2} onPress={handleSubmit}>
-                                    <Text style={styles.buttonText} >Submit</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
-
+                        </View>
                     </View>
-                </View>
 
-                {/* Buttons Section */}
+                    {/* Buttons Section */}
 
-            </ScrollView >
-
-        </View >
+                </ScrollView >
+            </SafeAreaView>
+        </SafeAreaProvider >
     );
 }
 const styles = StyleSheet.create({
-
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalContent: {
+        width: '80%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalText: {
+        fontSize: 16,
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    modalButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    modalButton: {
+        borderRadius: 10,
+        padding: 10,
+        minWidth: 100,
+        alignItems: 'center',
+    },
+    cancelButton: {
+        backgroundColor: '#ccc',
+    },
+    confirmButton: {
+        backgroundColor: '#4CAF50',
+    },
+    modalButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
     activeDot: {
         backgroundColor: '#4caf50',  // Active dot color
         width: 12,
@@ -1157,6 +1311,7 @@ const styles = StyleSheet.create({
     bodyColumn4: {
         width: '10%',
         /* marginLeft: 20 */
+        
     },
 
     bodyColumnPKG: {
@@ -1181,6 +1336,12 @@ const styles = StyleSheet.create({
     expandedValue: {
         fontSize: 10,
         color: '#000',
+    },
+    expandedQty: {
+        fontSize: 10,
+        /*  fontWeight: 'bold', */
+        textAlign: 'center',
+
     },
     expandedRemarks: {
         fontSize: 14,

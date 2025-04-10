@@ -33,6 +33,7 @@ interface TripDetails {
     item_description: string;
     item_qty: number;
     detail_volume: number;
+    is_posted: boolean,
     items: Item[];
 }
 interface BranchDetails {
@@ -48,8 +49,8 @@ export default function TripListDetails() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [hasClockIn, setHasClockIn] = useState<boolean>(false);
+    const [hasClockOut, setHasClockOut] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState<string>('');
-
     const router = useRouter();
     const params = useLocalSearchParams();
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -99,8 +100,10 @@ export default function TripListDetails() {
                     },
                 })
                 const hasClockedIn = timeInCheck.data.has_clocked_in || false;
+                const hasClockedOut = timeInCheck.data.has_clocked_out
                 console.log('atta', hasClockedIn)
                 setHasClockIn(hasClockedIn)
+                setHasClockOut(hasClockedOut)
                 setLoading(false);
             } catch (error) {
                 console.error(error);
@@ -297,14 +300,27 @@ export default function TripListDetails() {
                             </Text>
                         )}
                     </View>
-                    <TouchableOpacity onPress={timeOut}>
+                    {hasClockOut ? (
                         <View style={styles.attendanceButton2}>
                             <Text>
                                 Time out
                             </Text>
-                            <Ionicons style={styles.attendanceIcon} name={"exit-outline"} size={19} />
+                            <Ionicons
+                                style={styles.attendanceIcon}
+                                name="checkmark-circle"
+                                size={19}
+                                color="#4CAF50"
+                            />
                         </View>
-                    </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={timeOut}>
+                            <View style={styles.attendanceButton2}>
+                                <Text>
+                                    Time out
+                                </Text>
+                                <Ionicons style={styles.attendanceIcon} name={"exit-outline"} size={19} />
+                            </View>
+                        </TouchableOpacity>)}
                 </View>
             </View>
             <FlatList
@@ -319,9 +335,11 @@ export default function TripListDetails() {
                                 },
                             })
                         }
+                        disabled={item.is_posted === true}
                     >
                         <View style={styles.ticketContainer}>
-                            <View style={styles.ticketHeader}>
+                            <View style={[styles.ticketHeader, { backgroundColor: item.is_posted === true ? '#25292e' : '#4caf50' }
+                            ]}>
                                 <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_no}</Text>
                                 <Text style={styles.tripId2}>Trip Ticket Detail #{item.trip_ticket_detail_id}</Text>
                                 <Text style={styles.footerText}>{format(new Date(item.ref_trans_date), 'MMM dd, yyyy')}</Text>

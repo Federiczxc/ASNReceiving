@@ -96,3 +96,8 @@ class BranchLogsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripTicketBranchLogsModel
         fields = '__all__'
+        
+class TripTicketDetailReceivingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TripTicketDetailReceivingModel
+        fields = '__all__'

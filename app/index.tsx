@@ -25,8 +25,8 @@ export default function LoginPage() {
           onPress: () => null,
           style: 'cancel',
         },
-        { 
-          text: 'YES', 
+        {
+          text: 'YES',
           onPress: async () => {
             try {
               await AsyncStorage.removeItem('access_token');
@@ -103,8 +103,9 @@ export default function LoginPage() {
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Image style={styles.imageLogo} source={icon} />
-        <Text style={styles.text}>Delivery Monitoring System</Text>
       </View>
+      <Text style={styles.text}>Delivery Monitoring System</Text>
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     width: 120,
   },
   logoContainer: {
-    marginBottom: 20,
+    marginBottom: 15,
     alignItems: 'center',
   },
   input: {
