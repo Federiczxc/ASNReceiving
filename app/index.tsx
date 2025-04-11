@@ -135,7 +135,14 @@ export default function LoginPage() {
       </TouchableOpacity>
       {/* <Link href="/register" style={styles.link}>Register</Link> */}
 
-
+      <View style={styles.version}>
+        <Text style={styles.versionText}>
+          v3.5.5 - DEV
+        </Text>
+        <Text style={styles.versionText2}>
+         Updated: 4/11/25
+        </Text>
+      </View>
     </View>
   );
 }
@@ -209,5 +216,28 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: 'green',
     textDecorationLine: 'underline',
+  },
+  version: {
+    borderRadius: 15,
+    marginTop: 15,
+    backgroundColor: '#25292e',
+    width: '35%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 5,
+    position: 'absolute',
+    bottom: 10,
+  },
+  versionText: {
+    fontSize: 14,
+    color: '#fff',
+
+  },
+  versionText2: {
+    fontSize: 10,
+    color: '#fff',
+
   }
 });

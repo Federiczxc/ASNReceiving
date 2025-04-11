@@ -32,7 +32,7 @@ export default function Profile() {
                 const userObject = accessUser ? JSON.parse(accessUser) : null;
                 const username = userObject?.username;
 
-                console.log("niono",username);
+                console.log("niono", username);
                 console.log("niono", accessToken, accessUser);
 
                 console.log("propro", response.data);
@@ -98,6 +98,14 @@ export default function Profile() {
                         <Text style={styles.tripId}>View Attendance</Text>
                     </View>
                 </TouchableOpacity>
+            </View>
+            <View style={styles.version}>
+                <Text style={styles.versionText}>
+                    v3.5.5 - DEV
+                </Text>
+                <Text style={styles.versionText2}>
+                    Updated: 4/11/25
+                </Text>
             </View>
         </View>
 
@@ -178,5 +186,30 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         alignItems: 'center',
         justifyContent: 'center'
+    },
+    version: {
+        borderRadius: 15,
+        marginTop: 15,
+        borderWidth: 1,
+        backgroundColor: '#25292e',
+        color: '#fff',
+        width: '35%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 14,
+        textAlign: 'center',
+        padding: 5,
+        position: 'absolute',
+        bottom: 10,
+    },
+    versionText: {
+        fontSize: 14,
+        color: '#fff',
+
+    },
+    versionText2: {
+        fontSize: 10,
+        color: '#fff',
+
     }
 });

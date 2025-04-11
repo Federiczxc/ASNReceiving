@@ -99,7 +99,7 @@ export default function OutslipUpload() {
 
                     if (Array.isArray(item.serial_details)) {
                         item.serial_details.forEach(serial => {
-                            initialSerialQuantities[serial.serbat_id] = Math.round(Number(serial.item_qty)).toString();
+                            initialSerialQuantities[serial.i_trans_no] = Math.round(Number(serial.item_qty)).toString();
 
                         });
                     }
@@ -256,6 +256,19 @@ export default function OutslipUpload() {
             });
         });
     };
+
+    const validateSerialQuantity = (itemId, serialId, newValue) => {
+        const Item = outslipDetail.items.find(item => item.item_id === itemId);
+        if (!Item)
+            return false;
+        const docQTY = Number(Item.item_qty);
+        const itemQTY = Number(newValue) || 0;
+        if (itemQTY > docQTY) {
+            Alert.alert('Invalid Quantity', `Receiving quantity must not exceed Document quantity`);
+            return false;
+        }
+        return true;
+    }
     const handleOCR = async (index) => {
         setIsLoading(true);
 
@@ -363,7 +376,7 @@ export default function OutslipUpload() {
                     ref_trans_no: outslipDetail.ref_trans_no,
                     trans_code_id: outslipDetail.ref_trans_code_id,
                     item_id: item.item_id,
-                    item_qty: Number(serialQuantities[serial.serbat_id] || serial.item_qty),
+                    item_qty: Number(serialQuantities[serial.i_trans_no] || serial.item_qty),
                     doc_qty: item.item_qty,
                     ref_trans_detail_id: item.ref_trans_detail_id,
                     ref_trans_detail_pkg_id: item.ref_trans_detail_pkg_id,
@@ -592,9 +605,9 @@ export default function OutslipUpload() {
                                         </View>
 
                                         {outslipDetail.items.map((item) => (
-                                            <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                            <View key={`${item.item_id}-${item.ref_trans_detail_id}-${item.i_trans_no}`}>
                                                 <>
-                                                    <TouchableOpacity onPress={() => toggleItemExpansion(item.item_id)} activeOpacity={0.7}>
+                                                    <TouchableOpacity onPress={() => toggleItemExpansion(item.i_trans_no)} activeOpacity={0.7}>
 
                                                         <View style={styles.tableBody}>
                                                             <View style={styles.bodyColumnPKG}>
@@ -630,7 +643,7 @@ export default function OutslipUpload() {
                                                                 value={quantity[item.item_id] || ''}
                                                                 placeholder={Math.round(Number(item.item_qty)).toString()}
                                                             /> */}
-                                                                <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))}</Text>
+                                                                <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))} </Text>
 
                                                             </View>
                                                             <View style={styles.bodyColumn4}>
@@ -643,7 +656,7 @@ export default function OutslipUpload() {
 
                                                 {
 
-                                                    isExpandedItems[item.item_id] && (
+                                                    isExpandedItems[item.i_trans_no] && (
                                                         <>
                                                             {
                                                                 Array.isArray(item.serial_details) && item.serial_details.length > 0 ? (
@@ -666,13 +679,11 @@ export default function OutslipUpload() {
                                                                                     maxLength={10}
                                                                                     keyboardType='numeric'
                                                                                     onChangeText={(text) => {
-                                                                                        setSerialQuantities(prev => ({
-                                                                                            ...prev,
-                                                                                            [serial.serbat_id]: text
-                                                                                        }));
+                                                                                        if (validateSerialQuantity(item.item_id, serial.i_trans_no, text)) {
+                                                                                            setSerialQuantities(prev => (Object.assign(Object.assign({}, prev), { [serial.i_trans_no]: text })));
+                                                                                        }
                                                                                     }}
-                                                                                    value={serialQuantities[serial.serbat_id] || ''}
-                                                                                    placeholder={Math.round(Number(serial.item_qty)).toString()}
+                                                                                    value={serialQuantities[serial.i_trans_no] || 0}
                                                                                 />
                                                                                 {/* <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text> */}
 

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, LogBox, ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Button, Alert, LogBox, ActivityIndicator, Modal, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
@@ -55,6 +55,7 @@ export default function TripListDetails() {
     const params = useLocalSearchParams();
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
     const trip_ticket_id = Array.isArray(params.trip_ticket_id) ? params.trip_ticket_id[0] : params.trip_ticket_id;
+    const [modalVisible, setModalVisible] = useState(false);
 
     const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -128,57 +129,57 @@ export default function TripListDetails() {
             setCurrentPage(prevPage => prevPage - 1);
         }
     };
-    /*   const timeIn = async () => {
-          try {
-              setLoading(true)
-              const userData = await AsyncStorage.getItem('user_data');
-              const userId = userData ? JSON.parse(userData).user_id : null;
-              // Get the user's current location
-              const location = await getCurrentLocation();
-              if (!location) {
-                  Alert.alert('Error', 'Failed to get location');
-                  return;
-              }
-              const { latitude, longitude } = location;
-              console.log("TUITEUTEITIE", location, latitude, longitude);
-              const accessToken = await AsyncStorage.getItem('access_token');
-              // Get additional location data (e.g., address) using LocationIQ or another service
-              const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-              const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
-              console.log("titest2 ", currentDate);
-              console.log("titesmet2 ", currentTime);
-              console.log("tripticketinin", trip_ticket_id, id);
-              const clockInData = {
-                  latitude_in: latitude,
-                  longitude_in: longitude,
-                  created_by: userId,
-                  trip_ticket_id: trip_ticket_id,
-                  branch_id: id,
-              };
-              const postResponse = await api.post("/clock-in/", clockInData, {
-                  headers: {
-                      Authorization: `Bearer ${accessToken}`,
-                  },
-              });
-              console.log("clockindata", postResponse.data);
-              Alert.alert("Attendance!", "You have successfully clocked in today");
-          } catch (error: any) {
-  
-              if (error.response.status == 401) {
-                  Alert.alert('Error', 'Your login session has expired. Please log in');
-                  router.replace('/');
-                  return;
-              }
-              else {
-                  console.error("Error fetching location or clocking out:", error.response.data);
-                  Alert.alert("Error", JSON.stringify(error.response.data.error || error.response.data.detail));
-              }
-  
-          }
-          finally {
-              setLoading(false)
-          }
-      }; */
+    const timeIn = async () => {
+        try {
+            setLoading(true)
+            const userData = await AsyncStorage.getItem('user_data');
+            const userId = userData ? JSON.parse(userData).user_id : null;
+            // Get the user's current location
+            const location = await getCurrentLocation();
+            if (!location) {
+                Alert.alert('Error', 'Failed to get location');
+                return;
+            }
+            const { latitude, longitude } = location;
+            console.log("TUITEUTEITIE", location, latitude, longitude);
+            const accessToken = await AsyncStorage.getItem('access_token');
+            // Get additional location data (e.g., address) using LocationIQ or another service
+            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
+            console.log("titest2 ", currentDate);
+            console.log("titesmet2 ", currentTime);
+            console.log("tripticketinin", trip_ticket_id, id);
+            const clockInData = {
+                latitude_in: latitude,
+                longitude_in: longitude,
+                created_by: userId,
+                trip_ticket_id: trip_ticket_id,
+                branch_id: id,
+            };
+            const postResponse = await api.post("/clock-in/", clockInData, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+            console.log("clockindata", postResponse.data);
+            Alert.alert("Attendance!", "You have successfully clocked in today");
+        } catch (error: any) {
+
+            if (error.response.status == 401) {
+                Alert.alert('Error', 'Your login session has expired. Please log in');
+                router.replace('/');
+                return;
+            }
+            else {
+                console.error("Error fetching location or clocking out:", error.response.data);
+                Alert.alert("Error", JSON.stringify(error.response.data.error || error.response.data.detail));
+            }
+
+        }
+        finally {
+            setLoading(false)
+        }
+    };
     const timeOut = async () => {
         try {
             setLoading(true)
@@ -283,23 +284,34 @@ export default function TripListDetails() {
             <View style={styles.headerContainer}>
                 <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
                 <View style={styles.clockContainer}>
-                    <View style={styles.attendanceButton}>
-                        <Text>
-                            Timed in?
-                        </Text>
-                        {hasClockIn ? (
+
+                    {hasClockIn ? (
+                        <View style={styles.attendanceButton}>
+                            <Text>
+                                Time in
+                            </Text>
                             <Ionicons
                                 style={styles.attendanceIcon}
                                 name="checkmark-circle"
                                 size={19}
                                 color="#4CAF50"
                             />
-                        ) : (
-                            <Text style={styles.uploadPrompt}>
-                                Upload to check in
-                            </Text>
-                        )}
-                    </View>
+                        </View>
+
+                    ) : (
+                        <TouchableOpacity onPress={() => setModalVisible(true)}>
+                            <View style={styles.attendanceButton}>
+                                <Text>
+                                    Time in
+                                </Text>
+                                <Ionicons
+                                    style={styles.attendanceIcon}
+                                    name={"alarm-outline"}
+                                    size={19} />
+                            </View>
+                        </TouchableOpacity>
+
+                    )}
                     {hasClockOut ? (
                         <View style={styles.attendanceButton2}>
                             <Text>
@@ -353,13 +365,46 @@ export default function TripListDetails() {
 
                                 </View>
                             )}
-                            <View style={styles.ticketFooter}>
+                            <View style={[styles.ticketFooter, { backgroundColor: item.is_posted === true ? '#25292e' : '#4caf50' }
+                            ]}>
                                 <Text style={styles.footerText}>Remarks: {item.remarks}</Text>
                             </View>
                         </View>
                     </TouchableOpacity>
                 )}
             />
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}>
+                {/* Outer container that covers entire screen */}
+                <View style={styles.modalOverlay}>
+                    {/* Centered content container */}
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalText}>
+                            Please make sure you are in this branch before timing in. Press confirm to proceed.
+                        </Text>
+                        <View style={styles.modalButtonsContainer}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setModalVisible(false)}
+                                activeOpacity={0.7}>
+                                <Text style={styles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.confirmButton]}
+                                onPress={() => {
+                                    setModalVisible(false);
+                                    timeIn();
+                                }}
+                                activeOpacity={0.7}>
+                                <Text style={styles.modalButtonText}>Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
             <View style={styles.paginationButtons}>
                 <Button title="Previous" onPress={handlePrevPage} disabled={currentPage === 1} />
                 <Button title="Next" onPress={handleNextPage} disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)} />
@@ -368,6 +413,45 @@ export default function TripListDetails() {
     );
 }
 const styles = StyleSheet.create({
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalContent: {
+        width: '80%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalText: {
+        fontSize: 16,
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    modalButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    modalButton: {
+        borderRadius: 10,
+        padding: 10,
+        minWidth: 100,
+        alignItems: 'center',
+    },
+    modalButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
     attendanceButton: {
         borderWidth: 1.5,
         flexDirection: 'row',
@@ -376,6 +460,12 @@ const styles = StyleSheet.create({
         marginHorizontal: 10,
         borderColor: 'green',
         marginBottom: 5,
+    },
+    cancelButton: {
+        backgroundColor: '#ccc',
+    },
+    confirmButton: {
+        backgroundColor: '#4CAF50',
     },
     attendanceButton2: {
         borderWidth: 1.5,
