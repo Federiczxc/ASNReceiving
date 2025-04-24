@@ -137,10 +137,10 @@ export default function LoginPage() {
 
       <View style={styles.version}>
         <Text style={styles.versionText}>
-          v3.5.5 - DEV
+          v3.7.0 - DEV
         </Text>
         <Text style={styles.versionText2}>
-         Updated: 4/11/25
+         Updated: 4/23/25
         </Text>
       </View>
     </View>
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginTop: 15,
     backgroundColor: '#25292e',
-    width: '35%',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: 14,

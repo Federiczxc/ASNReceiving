@@ -9,6 +9,7 @@ import { LogBox } from 'react-native';
 
 interface TripUploads {
     trip_ticket_id: number;
+    trip_ticket_no: number;
     branch_name: string;
     trip_ticket_detail_id: number;
     trans_name: string;
@@ -127,7 +128,7 @@ export default function TripList() {
                                         params: { id: item.trip_ticket_id, trip: JSON.stringify(item) },
                                     })}>
  */}
-                                    <Text style={styles.tripId}>Trip Ticket ID: {item.trip_ticket_id} </Text>
+                                    <Text style={styles.tripId}>Trip Ticket #{item.trip_ticket_no} </Text>
                                     <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
                                         ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
                                         : 'N/A'}</Text>

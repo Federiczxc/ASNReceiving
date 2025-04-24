@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 interface Trip {
     trip_ticket_id: number;
+    trip_ticket_no: string;
     plate_no: string;
     remarks: string;
     entity_name: string;
@@ -39,7 +40,7 @@ export default function TripList() {
     }, []);
 
     const filteredTrips = tripData.filter((trip) =>
-        trip.trip_ticket_id.toString().includes(searchQuery));
+        trip.trip_ticket_no.toString().includes(searchQuery));
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -71,7 +72,7 @@ export default function TripList() {
             <Text style={styles.title}>Trip Ticket List</Text>
             <TextInput
                 style={styles.searchBar}
-                placeholder="Search by Trip Ticket ID"
+                placeholder="Search by Trip Ticket #"
                 keyboardType="numeric"
                 value={searchQuery}
                 onChangeText={(text) => {
@@ -81,6 +82,10 @@ export default function TripList() {
             />
             <FlatList
                 data={currentItems}
+                numColumns={1}
+                horizontal={false}
+                contentContainerStyle={{ alignItems: "stretch" }}
+                style={{ width: "100%" }}
                 keyExtractor={item => item.trip_ticket_id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
@@ -93,7 +98,7 @@ export default function TripList() {
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}>Trip Ticket ID: {item.trip_ticket_id} </Text>
+                                <Text style={styles.tripId}>Trip Ticket #{item.trip_ticket_no} </Text>
                                 <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy hh:mm a')}</Text>
 
                             </View>
@@ -157,9 +162,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#333',
         borderRadius: 15,
-        marginVertical: 35,
+        marginVertical: 20,
         overflow: 'hidden',
-        width: 320,
+        width: '100%',
         backgroundColor: '#fff',
         elevation: 3, // For a shadow effect
     },

@@ -8,10 +8,15 @@ interface TripBranch {
     branch_name: string;
 }
 
-
+interface TripTicket {
+    trip_ticket_id: number;
+    trip_ticket_no: number;
+    trip_ticket_date: Date;
+}
 export default function TripBranch() {
-    const { id } = useLocalSearchParams(); // Access route params
+    const { id, trip } = useLocalSearchParams(); // Access route params
     const [tripBranch, setTripBranch] = useState<TripBranch[]>([]);
+    const [tripTicket, setTripTicket] = useState<TripTicket>();
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
@@ -22,16 +27,20 @@ export default function TripBranch() {
         const fetchData = async () => {
             try {
                 const response = await api.get('/tripbranch/', {
-                    params: { id }
+                    params: { id, trip }
                 });
                 setTripBranch(response.data);
                 setLoading(false);
+                setTripTicket(JSON.parse(trip as string));
+                console.log("Parsed trip:", JSON.parse(trip as string));
                 console.log("tite", response.data);
+
             } catch (error) {
                 console.error(error);
                 setLoading(false);
             }
         };
+        console.log(1, trip);
 
         fetchData();
     }, []);
@@ -64,9 +73,13 @@ export default function TripBranch() {
     }
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Trip Ticket ID: {id}</Text>
+            <Text style={styles.title}>Trip Ticket #{tripTicket?.trip_ticket_no}</Text>
             <FlatList
                 data={currentItems}
+                numColumns={1}
+                horizontal={false}
+                contentContainerStyle={{ alignItems: "stretch" }}
+                style={{ width: "100%" }}
                 renderItem={({ item }) => (
                     <TouchableOpacity
                         onPress={() =>
@@ -81,7 +94,7 @@ export default function TripBranch() {
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}> Branch ID: {item.branch_id}</Text>
+                                <Text style={styles.tripId}> Branch #{item.branch_id}</Text>
                             </View>
                             <View style={styles.ticketBody}>
 
@@ -129,9 +142,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#333',
         borderRadius: 15,
-        marginVertical: 35,
+        marginVertical: 20,
         overflow: 'hidden',
-        width: 320,
+        width: '100%',
+        minWidth: '100%',
         backgroundColor: '#fff',
         elevation: 3, // For a shadow effect
     },

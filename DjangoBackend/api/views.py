@@ -597,7 +597,7 @@ class ClockInAttendance(APIView):
               ).exclude(branch_id=branch_id).first()
             if no_clock_out:
                 return Response(
-                    {"error": f"You haven't clocked out at trip ticket ID:{no_clock_out.trip_ticket_id} branch ID:{no_clock_out.branch_id}"},
+                    {"error": f"You haven't clocked out at Trip Ticket #:{no_clock_out.trip_ticket_id} Branch #:{no_clock_out.branch_id}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             else:

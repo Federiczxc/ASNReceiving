@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Button, Dimensions, Image, TextInput, BackHandler, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 import * as ImagePicker from 'expo-image-picker';
@@ -51,8 +51,11 @@ export default function OutslipUpload() {
     const toggleItemExpansion = (itemId) => {
         setIsExpandedItems(prev => (Object.assign(Object.assign({}, prev), { [itemId]: !prev[itemId] })));
     };
+
     useEffect(() => {
         setIsLoading(true);
+
+
         const fetchData = async () => {
             try {
                 const accessToken = await AsyncStorage.getItem('access_token');
@@ -85,6 +88,7 @@ export default function OutslipUpload() {
                 }
             }
         };
+
         fetchData();
     }, []);
 
@@ -143,9 +147,9 @@ export default function OutslipUpload() {
                                 </View>
                             </View>
                             {outslipDetail.items.map((item) => (
-                                <View key={`${item.item_id}-${item.ref_trans_id}`}>
+                                <View key={`${item.item_id}-${item.ref_trans_detail_id}-${item.i_trans_no}`}>
                                     <>
-                                        <TouchableOpacity onPress={() => toggleItemExpansion(item.item_id)} activeOpacity={0.7}>
+                                        <TouchableOpacity onPress={() => toggleItemExpansion(item.i_trans_no)} activeOpacity={0.7}>
 
                                             <View style={styles.tableBody}>
                                                 <View style={styles.bodyColumnPKG}>
@@ -176,11 +180,19 @@ export default function OutslipUpload() {
                                                     <Text style={styles.bodyLabel}>{item.uom_code}</Text>
                                                 </View>
                                             </View>
+                                            <View style={styles.expandedChevron}>
+
+                                                <Ionicons
+                                                    name={isExpandedItems[item.i_trans_no] ? "caret-down" : "caret-forward"}
+                                                    size={20}
+                                                    color="#666"
+                                                />
+                                            </View>
                                         </TouchableOpacity>
                                     </>
                                     {
 
-                                        isExpandedItems[item.item_id] && (
+                                        isExpandedItems[item.i_trans_no] && (
                                             <>
                                                 {
                                                     Array.isArray(item.serial_details) && item.serial_details.length > 0 ? (
@@ -235,6 +247,12 @@ export default function OutslipUpload() {
                         <View style={styles.ticketHeader}>
                             <Text style={styles.tripId}>Uploaded Images</Text>
                         </View>
+                        <Ionicons
+                            name={isExpanded2 ? "chevron-down" : "chevron-forward"}
+                            size={20}
+                            color="#666"
+                            style={{ alignSelf: 'center' }}
+                        />
                     </TouchableOpacity>
                     {isExpanded2 && (
                         <>
@@ -559,32 +577,46 @@ const styles = StyleSheet.create({
     },
     bodyColumn1: { //barcode
         width: '25%',
+        alignSelf: 'center',
+
     },
     bodyColumn2: { // description
         width: '30%',
+        alignSelf: 'center',
+
     },
     bodyColumn3: {
         width: '10%',
-        alignContent: 'center',
+        alignSelf: 'center',
     },
     bodyColumn4: {
         width: '10%',
         /* marginLeft: 20 */
+        alignSelf: 'center',
+
     },
 
     bodyColumnPKG: {
         width: '10%',
         /* marginLeft: 20 */
+        alignSelf: 'center',
+
     },
     bodyColumnCOMP: {
         width: '15%',
         /* marginLeft: 20 */
+        alignSelf: 'center',
+
     },
     expandedItems: {
         backgroundColor: '#ffd33d',
         flexDirection: 'row',
         padding: 5,
         borderWidth: 0.5,
+    },
+    expandedChevron: {
+        backgroundColor: '#ffd33d',
+
     },
     expandedLabel: {
         fontSize: 12,
@@ -594,5 +626,9 @@ const styles = StyleSheet.create({
     expandedValue: {
         fontSize: 10,
         color: '#000',
+    },
+    expandedQty: {
+        fontSize: 10,
+        textAlign: 'center',
     },
 });

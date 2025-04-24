@@ -12,6 +12,7 @@ import { VELOCITY_EPS } from 'react-native-reanimated/lib/typescript/animation/d
 interface Attendance {
     log_id: number;
     trip_ticket_id: number;
+    trip_ticket_no: number;
     branch_id: string;
     time_in: number;
     time_out: string;
@@ -125,7 +126,7 @@ export default function ManageAttendance() {
                                     })}>
 
                                         <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
-                                        <Text style={styles.footerText}> Trip Ticket ID: {item.trip_ticket_id} </Text>
+                                        <Text style={styles.footerText}> Trip Ticket #{item.trip_ticket_no} </Text>
                                         <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
                                     </TouchableOpacity>
                                 </View>

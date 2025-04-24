@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Button, Modal, Dimensions, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable, Pressable } from 'react-native';
+import { View, Text, Button, Modal, Dimensions, Image, TextInput, BackHandler, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location'
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -51,7 +51,7 @@ export default function OutslipUpload() {
     };
 
     const navigation = useNavigation();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [ocrText, setOcrText] = useState('');
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -76,8 +76,36 @@ export default function OutslipUpload() {
     const [cameraPreview, setCameraPreview] = useState(false);
     const [isChecked, setChecked] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+
+    useEffect(() => {
+        const backAction = () => {
+            if (isLoading) {
+                Alert.alert('', 'Are you sure you want to go back to previous page? All unsaved changes will be lost', [
+                    {
+                        text: 'Cancel',
+                        onPress: () => null,
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Yes',
+                        onPress: () => router.back(),
+
+                    }
+                ])
+                return true;
+            };
+
+        }
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction,
+        );
+
+        return () => backHandler.remove();
+    }, [isLoading]);
     useEffect(() => {
         setIsLoading(true);
+
         const checkPermissions = async () => {
             await verifyCameraPermissions();
         };
@@ -99,7 +127,8 @@ export default function OutslipUpload() {
 
                     if (Array.isArray(item.serial_details)) {
                         item.serial_details.forEach(serial => {
-                            initialSerialQuantities[serial.i_trans_no] = Math.round(Number(serial.item_qty)).toString();
+                            const uniqueKey = `${serial.i_trans_no}_${serial.serbat_id}`;
+                            initialSerialQuantities[uniqueKey] = Math.round(Number(serial.item_qty)).toString();
 
                         });
                     }
@@ -108,8 +137,9 @@ export default function OutslipUpload() {
                 setSerialQuantities(initialSerialQuantities);
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
-                console.log("out", response.data.tripdetails[0]);
                 setIsLoading(false);
+
+                console.log("out", response.data.tripdetails[0]);
                 /* console.log("OCLE", ocrResults.length) */
             } catch (error) {
                 if (error.response.status === 401) {
@@ -125,14 +155,16 @@ export default function OutslipUpload() {
     useFocusEffect(
         useCallback(() => {
             navigation.setOptions({
-                headerShown: !(isCameraFullscreen || cameraPreview),
+                headerShown: !(isCameraFullscreen || cameraPreview || isLoading),
             });
+
             return () => {
                 navigation.setOptions({
                     headerShown: true,
                 });
             };
-        }, [isCameraFullscreen, cameraPreview])
+
+        }, [isCameraFullscreen, cameraPreview, isLoading])
     );
     /* console.log("brara", tripBranch); */
 
@@ -177,7 +209,7 @@ export default function OutslipUpload() {
             return;
         }
         if (cameraRef) {
-            const photo = await cameraRef.takePictureAsync({ quality: 1 })
+            const photo = await cameraRef.takePictureAsync({ quality: 0.8 })
             setCapturedImage(photo.uri)
             setIsCameraFullscreen(false);
             /* let newImages = [...images];
@@ -216,6 +248,7 @@ export default function OutslipUpload() {
             });
         });
     };
+
 
     const removeSlide = (index) => {
         if (images.length === 1) {
@@ -257,7 +290,7 @@ export default function OutslipUpload() {
         });
     };
 
-    const validateSerialQuantity = (itemId, serialId, newValue) => {
+    const validateSerialQuantity = (itemId, serialId, serbatId, newValue) => {
         const Item = outslipDetail.items.find(item => item.item_id === itemId);
         if (!Item)
             return false;
@@ -269,6 +302,7 @@ export default function OutslipUpload() {
         }
         return true;
     }
+
     const handleOCR = async (index) => {
         setIsLoading(true);
 
@@ -376,8 +410,8 @@ export default function OutslipUpload() {
                     ref_trans_no: outslipDetail.ref_trans_no,
                     trans_code_id: outslipDetail.ref_trans_code_id,
                     item_id: item.item_id,
-                    item_qty: Number(serialQuantities[serial.i_trans_no] || serial.item_qty),
-                    doc_qty: item.item_qty,
+                    item_qty: Number(serialQuantities[`${serial.i_trans_no}_${serial.serbat_id}`] || 0),
+                    doc_qty: item.item_qty || 0,
                     ref_trans_detail_id: item.ref_trans_detail_id,
                     ref_trans_detail_pkg_id: item.ref_trans_detail_pkg_id,
                     i_trans_no: serial.i_trans_no,
@@ -462,14 +496,7 @@ export default function OutslipUpload() {
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-            /* router.replace({
-                pathname: 'trip_list_details/[id]',
-                params: {
-                    id: tripBranch.branch_id,
-                    trip_ticket_id: outslipDetail.trip_ticket_id.toString()
-                }
-            }
-            ) */
+            router.back()
             console.log('succ', response.data);
         }
         catch (error) {
@@ -643,7 +670,7 @@ export default function OutslipUpload() {
                                                                 value={quantity[item.item_id] || ''}
                                                                 placeholder={Math.round(Number(item.item_qty)).toString()}
                                                             /> */}
-                                                                <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))} </Text>
+                                                                <Text style={styles.bodyLabelQTY}>{Math.round(Number(item.item_qty))}</Text>
 
                                                             </View>
                                                             <View style={styles.bodyColumn4}>
@@ -651,6 +678,15 @@ export default function OutslipUpload() {
                                                                 <Text style={styles.bodyLabel}>{item.uom_code}</Text>
                                                             </View>
                                                         </View>
+                                                        <View style={styles.expandedChevron}>
+
+                                                            <Ionicons
+                                                                name={isExpandedItems[item.i_trans_no] ? "caret-down" : "caret-forward"}
+                                                                size={20}
+                                                                color="#666"
+                                                            />
+                                                        </View>
+
                                                     </TouchableOpacity>
                                                 </>
 
@@ -679,11 +715,15 @@ export default function OutslipUpload() {
                                                                                     maxLength={10}
                                                                                     keyboardType='numeric'
                                                                                     onChangeText={(text) => {
-                                                                                        if (validateSerialQuantity(item.item_id, serial.i_trans_no, text)) {
-                                                                                            setSerialQuantities(prev => (Object.assign(Object.assign({}, prev), { [serial.i_trans_no]: text })));
+                                                                                        const uniqueKey = `${serial.i_trans_no}_${serial.serbat_id}`
+                                                                                        if (validateSerialQuantity(item.item_id, serial.i_trans_no, serial.serbat_id, text)) {
+                                                                                            setSerialQuantities(prev => ({
+                                                                                                ...prev,
+                                                                                                [uniqueKey]: text,
+                                                                                            }));
                                                                                         }
                                                                                     }}
-                                                                                    value={serialQuantities[serial.i_trans_no] || 0}
+                                                                                    value={serialQuantities[`${serial.i_trans_no}_${serial.serbat_id}`] || 0}
                                                                                 />
                                                                                 {/* <Text style={styles.expandedValue}>{serial.item_qty || 'N/A'}</Text> */}
 
@@ -778,7 +818,12 @@ export default function OutslipUpload() {
                                 <View style={styles.ticketHeader}>
                                     <Text style={styles.tripId}>Upload Images</Text>
                                 </View>
-
+                                <Ionicons
+                                    name={isExpanded2 ? "chevron-down" : "chevron-forward"}
+                                    size={20}
+                                    color="#666"
+                                    style={{ alignSelf: 'center' }}
+                                />
                             </TouchableOpacity>
                             {isExpanded2 && (
                                 <>
@@ -786,7 +831,7 @@ export default function OutslipUpload() {
                                         key={images.length}
                                         loop={false}
                                         width={Dimensions.get('window').width * 1}
-                                        height={Dimensions.get('window').height * 0.5}
+                                        height={Dimensions.get('window').height * 0.45}
                                         data={images}
                                         scrollAnimationDuration={200}
                                         onProgressChange={(_, absoluteProgress) => {
@@ -1081,7 +1126,6 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
-        borderRadius: 20,
         resizeMode: 'contain',
         /* borderWidth: 1,
         borderColor: 'red', */
@@ -1313,27 +1357,37 @@ const styles = StyleSheet.create({
     },
     bodyColumn1: { //barcode
         width: '25%',
+        alignSelf: 'center',
+
     },
     bodyColumn2: { // description
         width: '30%',
+        alignSelf: 'center',
+
     },
     bodyColumn3: {
         width: '10%',
-        alignContent: 'center',
+        textAlign: 'center',
+        alignSelf: 'center',
     },
     bodyColumn4: {
         width: '10%',
-        /* marginLeft: 20 */
+        marginLeft: 5,
+        alignSelf: 'center',
 
     },
 
     bodyColumnPKG: {
         width: '10%',
         /* marginLeft: 20 */
+        alignSelf: 'center',
+
     },
     bodyColumnCOMP: {
         width: '15%',
         /* marginLeft: 20 */
+        alignSelf: 'center',
+
     },
     expandedItems: {
         backgroundColor: '#ffd33d',
@@ -1349,12 +1403,14 @@ const styles = StyleSheet.create({
     expandedValue: {
         fontSize: 10,
         color: '#000',
+        /* textAlign: 'center', */
+
     },
     expandedQty: {
-        fontSize: 10,
-        /*  fontWeight: 'bold', */
+        fontSize: 12,
+        fontWeight: 500,
         textAlign: 'center',
-
+        borderWidth: 0.5,
     },
     expandedRemarks: {
         fontSize: 14,
@@ -1365,5 +1421,9 @@ const styles = StyleSheet.create({
     expandedFooter: {
         backgroundColor: '#ffd33d',
         padding: 10,
+    },
+    expandedChevron: {
+        backgroundColor: '#ffd33d',
+
     },
 });
