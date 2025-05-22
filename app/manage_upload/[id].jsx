@@ -581,10 +581,13 @@ export default function OutslipUpload() {
                                                             </View>
                                                             <View style={styles.expandedChevron}>
                                                                 <Ionicons
-                                                                    name={isExpandedItems[item.i_trans_no] ? "caret-down" : "caret-forward"}
+                                                                    name={isExpandedItems[item.i_trans_no] ? "chevron-down" : "chevron-forward"}
                                                                     size={20}
                                                                     color="#666"
                                                                 />
+                                                                <Text style={styles.expandedChevronText}>
+                                                                    Receiving Quantity
+                                                                </Text>
                                                             </View>
                                                         </TouchableOpacity>
                                                     </>
@@ -1118,6 +1121,13 @@ const styles = StyleSheet.create({
     },
     expandedChevron: {
         backgroundColor: '#ffd33d',
+        flex: 1,
+        flexWrap: 'wrap',
+        flexDirection: 'row',
+    },
+    expandedChevronText: {
+        fontWeight: 300,
+        fontStyle: "italic",
     },
     expandedLabel: {
         fontSize: 12,

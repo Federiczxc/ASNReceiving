@@ -24,6 +24,7 @@ urlpatterns = [
     #path('retrieve-location/', RetrieveLocationView.as_view(), name='retrievelocation'),
     #path('save-location/', SaveLocationView.as_view(), name='savelocation'),
     path('clock-in/', ClockInAttendance.as_view(), name='clockinattendance'),
+    path('undo-clock-in/', UndoClockInAttendance.as_view(), name='undoclockin'),
     path('check-clock-in/', CheckClockInView.as_view(), name='checkclockin'),
     path('clock-out/', ClockOutAttendance.as_view(), name='clockoutattendance'),
     path('manage-attendance/', ManageAttendanceView.as_view(), name='attendanceview'),

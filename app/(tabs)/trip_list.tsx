@@ -22,19 +22,20 @@ export default function TripList() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
-
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
+    const fetchData = async () => {
+        try {
+            const response = await api.get('/triplist/');
+            setTripData(response.data.triplist);
+            setLoading(false);
+        } catch (error) {
+            console.error(error);
+            setLoading(false);
+        }
+    };
     const router = useRouter();
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await api.get('/triplist/');
-                setTripData(response.data.triplist);
-                setLoading(false);
-            } catch (error) {
-                console.error(error);
-                setLoading(false);
-            }
-        };
+
 
         fetchData();
     }, []);
@@ -85,6 +86,8 @@ export default function TripList() {
 
             <FlatList
                 data={currentItems}
+                onRefresh={fetchData}
+                refreshing={loading}
                 keyExtractor={item => item.trip_ticket_id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
@@ -96,7 +99,7 @@ export default function TripList() {
                         }
                     >
                         <View style={styles.ticketContainer}>
-                            <View style={styles.ticketHeader}>  
+                            <View style={styles.ticketHeader}>
                                 <Text style={styles.tripId}>Trip Ticket #{item.trip_ticket_no} </Text>
                                 <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy')}</Text>
 
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         width: '100%',
         marginTop: 20,
-        
+
     },
     disabledButton: {
         backgroundColor: '#cccccc',

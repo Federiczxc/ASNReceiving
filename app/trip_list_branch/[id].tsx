@@ -22,22 +22,22 @@ export default function TripBranch() {
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
     const router = useRouter();
-
+    const fetchData = async () => {
+        try {
+            const response = await api.get('/tripbranch/', {
+                params: { id, trip }
+            });
+            setTripBranch(response.data);
+            setLoading(false);
+            setTripTicket(JSON.parse(trip as string));
+            console.log("tite", response.data);
+        } catch (error) {
+            console.error(error);
+            setLoading(false);
+        }
+    };
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await api.get('/tripbranch/', {
-                    params: { id, trip }
-                });
-                setTripBranch(response.data);
-                setLoading(false);
-                setTripTicket(JSON.parse(trip as string));
-                console.log("tite", response.data);
-            } catch (error) {
-                console.error(error);
-                setLoading(false);
-            }
-        };
+
 
         fetchData();
     }, []);
@@ -86,6 +86,8 @@ export default function TripBranch() {
             <FlatList
                 data={currentItems}
                 numColumns={1}
+                onRefresh={fetchData}
+                refreshing={loading}
                 horizontal={false}
                 contentContainerStyle={{ alignItems: "stretch" }}
                 style={{ width: "100%" }}

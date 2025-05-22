@@ -68,7 +68,7 @@ class TripDetailsModel(models.Model):
     document_amount = models.DecimalField(max_digits=18, decimal_places=2)
     detail_volume = models.DecimalField(max_digits=18, decimal_places=6)
     is_posted = models.BooleanField()
-
+    updated_date = models.DateTimeField()
     
     class Meta:
         db_table = 'scm_tr_trip_ticket_detail'

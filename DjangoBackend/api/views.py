@@ -177,6 +177,8 @@ class TripDetailView(APIView):
                         'items': [],
                         'branch_name': row.get('branch_name'),
                         'is_posted': row['is_posted'],
+                        'updated_date':row['updated_date'],
+                        'created_date':row['created_date'],
                     }
                     branches.add(row['branch_id'])
                 
@@ -917,7 +919,36 @@ class ClockInAttendance(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-    
+class UndoClockInAttendance(APIView):
+    permission_classes = [IsAuthenticated]
+    def post (self, request):
+        data = request.data
+        user_id = data['created_by']
+        trip_ticket_id=data.get('trip_ticket_id')
+        branch_id=data.get('branch_id')
+        print(f"use2r", user_id)
+        try:
+            has_clocked_out = TripTicketBranchLogsModel.objects.filter(
+                created_by=user_id,
+                trip_ticket_id=trip_ticket_id,
+                branch_id= branch_id,
+                time_out__isnull=False
+            ).exists()
+            
+            if has_clocked_out:
+                return Response (
+                    {"error": f"You have already clocked out you can't remove your clock in"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            TripTicketBranchLogsModel.objects.filter(
+                created_by=user_id,
+                trip_ticket_id=trip_ticket_id,
+                branch_id=branch_id,
+                time_out__isnull=True,
+            ).delete()
+            return Response ({"message": "insucc"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class ClockOutAttendance(APIView):
     permission_classes = [IsAuthenticated]
     def post (self, request):

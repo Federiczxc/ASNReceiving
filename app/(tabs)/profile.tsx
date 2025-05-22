@@ -88,7 +88,7 @@ export default function Profile() {
             <View style={styles.ticketContainer}>
                 <TouchableOpacity onPress={() => router.push('/manage_upload/manage_upload')} activeOpacity={0.7}>
                     <View style={styles.ticketHeader}>
-                        <Text style={styles.tripId}>View Uploads</Text>
+                        <Text style={styles.tripId}>Manage Uploads</Text>
                     </View>
                 </TouchableOpacity>
             </View>
@@ -101,10 +101,10 @@ export default function Profile() {
             </View>
             <View style={styles.version}>
                 <Text style={styles.versionText}>
-                    v3.0.0 - TEST 
+                    v3.1.0 - TEST 
                 </Text>
                 <Text style={styles.versionText2}>
-                    Updated: 5/15/25
+                    Updated: 5/22/25
                 </Text>
             </View>
         </View>

@@ -26,6 +26,8 @@ interface TripDetails {
     branch_charges: number;
     document_amount: number;
     ref_trans_date: Date;
+    updated_date: number;
+    created_date: number;
     ref_trans_id: number;
     ref_trans_no: string;
     branch_name: string;
@@ -57,7 +59,7 @@ export default function TripListDetails() {
     const trip_ticket_id = Array.isArray(params.trip_ticket_id) ? params.trip_ticket_id[0] : params.trip_ticket_id;
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
-
+    const [modalVisible3, setModalVisible3] = useState(false);
     const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
         const startTime = Date.now();
 
@@ -123,38 +125,39 @@ export default function TripListDetails() {
 
         return () => backHandler.remove();
     }, [loading]);
+    const fetchData = async () => {
+        try {
+            const accessToken = await AsyncStorage.getItem('access_token');
+            const response = await api.get('/tripdetails/', {
+                params: { trip_ticket_id, branch_id }
+            });
+            setTripDetails(response.data.tripdetails);
+            console.log("tite", response.data.tripdetails);
+            setBranchDetails(response.data.branches[0]);
+            const timeInCheck = await api.get('/check-clock-in/', {
+                params: {
+                    trip_ticket_id: trip_ticket_id,
+                    branch_id: branch_id,
+                },
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            })
+            const hasClockedIn = timeInCheck.data.has_clocked_in || false;
+            const hasClockedOut = timeInCheck.data.has_clocked_out
+            /* console.log('atta', hasClockedIn) */
+            setHasClockIn(hasClockedIn)
+            setHasClockOut(hasClockedOut)
+            setLoading(false);
+        } catch (error) {
+            console.error(error);
+            setLoading(false);
+        }
+    };
     useFocusEffect(
         useCallback(() => {
-            const fetchData = async () => {
-                try {
-                    const accessToken = await AsyncStorage.getItem('access_token');
-                    const response = await api.get('/tripdetails/', {
-                        params: { trip_ticket_id, branch_id }
-                    });
-                    setTripDetails(response.data.tripdetails);
-                    console.log("tite", response.data.tripdetails);
-                    setBranchDetails(response.data.branches[0]);
-                    const timeInCheck = await api.get('/check-clock-in/', {
-                        params: {
-                            trip_ticket_id: trip_ticket_id,
-                            branch_id: branch_id,
-                        },
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                            'Authorization': `Bearer ${accessToken}`,
-                        },
-                    })
-                    const hasClockedIn = timeInCheck.data.has_clocked_in || false;
-                    const hasClockedOut = timeInCheck.data.has_clocked_out
-                    /* console.log('atta', hasClockedIn) */
-                    setHasClockIn(hasClockedIn)
-                    setHasClockOut(hasClockedOut)
-                    setLoading(false);
-                } catch (error) {
-                    console.error(error);
-                    setLoading(false);
-                }
-            };
+
             fetchData();
         }, [trip_ticket_id, branch_id])
     );
@@ -234,6 +237,45 @@ export default function TripListDetails() {
             console.log("🔍 Location retrieval:", locEnd - locStart, "ms");
             console.log("📤 API request:", reqEnd - reqStart, "ms");
             console.log("⏱ Total timeOut():", total, "ms");
+            setLoading(false)
+        }
+    };
+    const timeInUndo = async () => {
+        ;
+        try {
+            setLoading(true)
+            const userData = await AsyncStorage.getItem('user_data');
+            const userId = userData ? JSON.parse(userData).user_id : null;
+            const accessToken = await AsyncStorage.getItem('access_token');
+
+            const clockInData = {
+                created_by: userId,
+                trip_ticket_id: trip_ticket_id,
+                branch_id: id,
+            };
+            console.log("clokindata", clockInData);
+            const postResponse = await api.post("/undo-clock-in/", clockInData, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+            console.log("clockindata", postResponse.data);
+            setHasClockIn(false);
+            Alert.alert("Attendance!", "You have successfully removed your clock in");
+        } catch (error: any) {
+
+            if (error.response.status == 401) {
+                Alert.alert('Error', 'Your login session has expired. Please log in');
+                router.replace('/');
+                return;
+            }
+            else {
+                console.error("Error:", error.response.data);
+                Alert.alert("Error", JSON.stringify(error.response.data.error || error.response.data.detail));
+            }
+
+        }
+        finally {
             setLoading(false)
         }
     };
@@ -365,18 +407,19 @@ export default function TripListDetails() {
                 <View style={styles.clockContainer}>
 
                     {hasClockIn ? (
-                        <View style={styles.attendanceButton}>
-                            <Text>
-                                Time in
-                            </Text>
-                            <Ionicons
-                                style={styles.attendanceIcon}
-                                name="checkmark-circle"
-                                size={19}
-                                color="#4CAF50"
-                            />
-                        </View>
-
+                        <TouchableOpacity onPress={() => setModalVisible3(true)}>
+                            <View style={styles.attendanceButton}>
+                                <Text>
+                                    Time in
+                                </Text>
+                                <Ionicons
+                                    style={styles.attendanceIcon}
+                                    name="checkmark-circle"
+                                    size={19}
+                                    color="#4CAF50"
+                                />
+                            </View>
+                        </TouchableOpacity>
                     ) : (
                         <TouchableOpacity onPress={() => setModalVisible(true)}>
                             <View style={styles.attendanceButton}>
@@ -420,6 +463,8 @@ export default function TripListDetails() {
                 data={currentItems}
                 numColumns={1}
                 horizontal={false}
+                onRefresh={fetchData}
+                refreshing={loading}
                 contentContainerStyle={{ alignItems: "stretch" }}
                 style={{ width: "100%" }}
                 renderItem={({ item }) => (
@@ -439,8 +484,7 @@ export default function TripListDetails() {
                             <View style={[styles.ticketHeader, { backgroundColor: item.is_posted === true ? '#25292e' : '#4caf50' }
                             ]}>
                                 <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_no}</Text>
-                                <Text style={styles.tripId2}>Trip Ticket Detail #{item.trip_ticket_detail_id}</Text>
-                                <Text style={styles.footerText}>{format(new Date(item.ref_trans_date), 'MMM dd, yyyy')}</Text>
+                                <Text style={styles.footerText}>Encoded Date: {format(new Date(item.created_date), 'MMM dd, yyyy hh:mm a')}</Text>
                             </View>
                             {item.items && item.items.length > 0 && (
                                 <View style={styles.ticketBody}>
@@ -516,6 +560,38 @@ export default function TripListDetails() {
                                 onPress={() => {
                                     setModalVisible2(false);
                                     timeOut();
+                                }}
+                                activeOpacity={0.7}>
+                                <Text style={styles.modalButtonText}>Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={modalVisible3}
+                onRequestClose={() => setModalVisible3(false)}>
+                {/* Outer container that covers entire screen */}
+                <View style={styles.modalOverlay}>
+                    {/* Centered content container */}
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalText}>
+                            Do you want to remove your time in entry for this branch?
+                        </Text>
+                        <View style={styles.modalButtonsContainer}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setModalVisible3(false)}
+                                activeOpacity={0.7}>
+                                <Text style={styles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.confirmButton]}
+                                onPress={() => {
+                                    setModalVisible3(false);
+                                    timeInUndo();
                                 }}
                                 activeOpacity={0.7}>
                                 <Text style={styles.modalButtonText}>Confirm</Text>

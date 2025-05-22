@@ -135,10 +135,10 @@ export default function LoginPage() {
 
       <View style={styles.version}>
         <Text style={styles.versionText}>
-          v3.0.0 - TEST
+          v3.1.0 - TEST
         </Text>
         <Text style={styles.versionText2}>
-          Updated: 5/15/25
+          Updated: 5/22/25
         </Text>
       </View>
     </View>
