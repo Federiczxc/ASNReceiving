@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         marginVertical: 20,
         overflow: 'hidden',
-        width: 320,
+        minWidth: '100%',
         backgroundColor: '#fff',
         elevation: 3, // For a shadow effect
     },

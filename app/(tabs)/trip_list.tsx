@@ -6,7 +6,8 @@ import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 interface Trip {
     trip_ticket_id: number;
-    trip_ticket_no: string;
+    trip_ticket_no: number;
+
     plate_no: string;
     remarks: string;
     entity_name: string;
@@ -21,7 +22,6 @@ export default function TripList() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(10); // Number of items per page
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [hasMore, setHasMore] = useState<boolean>(true);
 
     const router = useRouter();
     useEffect(() => {
@@ -69,23 +69,22 @@ export default function TripList() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Trip Ticket List</Text>
-            <TextInput
-                style={styles.searchBar}
-                placeholder="Search by Trip Ticket #"
-                keyboardType="numeric"
-                value={searchQuery}
-                onChangeText={(text) => {
-                    setSearchQuery(text);
-                    setCurrentPage(1); // Reset to first page on new search
-                }}
-            />
+            <View style={styles.header}>
+                <Text style={styles.title}>Trip Ticket List</Text>
+                <TextInput
+                    style={styles.searchBar}
+                    placeholder="Search by Trip Ticket #"
+                    keyboardType="numeric"
+                    value={searchQuery}
+                    onChangeText={(text) => {
+                        setSearchQuery(text);
+                        setCurrentPage(1); // Reset to first page on new search
+                    }}
+                />
+            </View>
+
             <FlatList
                 data={currentItems}
-                numColumns={1}
-                horizontal={false}
-                contentContainerStyle={{ alignItems: "stretch" }}
-                style={{ width: "100%" }}
                 keyExtractor={item => item.trip_ticket_id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
@@ -97,9 +96,9 @@ export default function TripList() {
                         }
                     >
                         <View style={styles.ticketContainer}>
-                            <View style={styles.ticketHeader}>
+                            <View style={styles.ticketHeader}>  
                                 <Text style={styles.tripId}>Trip Ticket #{item.trip_ticket_no} </Text>
-                                <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy hh:mm a')}</Text>
+                                <Text style={styles.footerText} >{format(new Date(item.trip_ticket_date), 'MMM dd, yyyy')}</Text>
 
                             </View>
                             <View style={styles.ticketBody}>
@@ -127,9 +126,20 @@ export default function TripList() {
                     </TouchableOpacity>
                 )}
             />
-            <View style={styles.paginationButtons}>
-                <Button title="Previous" onPress={handlePrevPage} disabled={currentPage === 1} />
-                <Button title="Next" onPress={handleNextPage} disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)} />
+            <View style={styles.paginationContainer}>
+                <TouchableOpacity style={[
+                    styles.paginationButtons,
+                    currentPage === 1 && styles.disabledButton
+                ]} onPress={handlePrevPage} disabled={currentPage === 1} >
+                    <Text style={styles.paginationText}>
+                        PREVIOUS
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.paginationButtons, currentPage === Math.ceil(filteredTrips.length / itemsPerPage) && styles.disabledButton]} onPress={handleNextPage}>
+                    <Text style={styles.paginationText}>
+                        NEXT
+                    </Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -141,7 +151,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: 'ffd33d'
+        /*  backgroundColor: '#ffd33d' */
+    },
+    header: {
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     title: {
         fontSize: 24,
@@ -165,6 +180,7 @@ const styles = StyleSheet.create({
         marginVertical: 20,
         overflow: 'hidden',
         width: '100%',
+        minWidth: '100%',
         backgroundColor: '#fff',
         elevation: 3, // For a shadow effect
     },
@@ -207,10 +223,23 @@ const styles = StyleSheet.create({
         fontWeight: 500,
         textAlign: 'center',
     },
-    paginationButtons: {
+    paginationContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
         marginTop: 20,
+        
     },
+    disabledButton: {
+        backgroundColor: '#cccccc',
+        opacity: 0.6,
+    },
+    paginationButtons: {
+        padding: 8,
+        backgroundColor: '#2196F3'
+    },
+    paginationText: {
+        color: '#fff',
+        fontWeight: 500,
+    }
 });

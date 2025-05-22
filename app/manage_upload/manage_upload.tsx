@@ -14,6 +14,7 @@ interface TripUploads {
     trip_ticket_detail_id: number;
     trans_name: string;
     ref_trans_date: Date;
+    created_date: Date;
     ref_trans_id: number;
 }
 
@@ -129,8 +130,8 @@ export default function TripList() {
                                     })}>
  */}
                                     <Text style={styles.tripId}>Trip Ticket #{item.trip_ticket_no} </Text>
-                                    <Text style={styles.footerText}>{Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
-                                        ? format(new Date(item.trip_ticket_detail_id[0].ref_trans_date), 'MMM dd, yyyy')
+                                    <Text style={styles.footerText}>Upload Date: {Array.isArray(item.trip_ticket_detail_id) && item.trip_ticket_detail_id.length > 0
+                                        ? format(new Date(item.trip_ticket_detail_id[0].created_date), 'MMM dd, yyyy')
                                         : 'N/A'}</Text>
                                     {/* </TouchableOpacity> */}
 
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         marginVertical: 20,
         overflow: 'hidden',
-        width: 320,
+        minWidth: '100%',
         backgroundColor: '#fff',
         elevation: 3, // For a shadow effect
     },

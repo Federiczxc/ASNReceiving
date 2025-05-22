@@ -76,24 +76,22 @@ export default function OutslipUpload() {
     const [cameraPreview, setCameraPreview] = useState(false);
     const [isChecked, setChecked] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
-
+    const [uploadProgress, setUploadProgress] = useState({});
     useEffect(() => {
         const backAction = () => {
-            if (isLoading) {
-                Alert.alert('', 'Are you sure you want to go back to previous page? All unsaved changes will be lost', [
-                    {
-                        text: 'Cancel',
-                        onPress: () => null,
-                        style: 'cancel',
-                    },
-                    {
-                        text: 'Yes',
-                        onPress: () => router.back(),
+            Alert.alert('', 'Are you sure you want to go back to previous page? All unsaved changes will be lost', [
+                {
+                    text: 'Cancel',
+                    onPress: () => null,
+                    style: 'cancel',
+                },
+                {
+                    text: 'Yes',
+                    onPress: () => router.back(),
 
-                    }
-                ])
-                return true;
-            };
+                }
+            ])
+            return true;
 
         }
         const backHandler = BackHandler.addEventListener(
@@ -105,7 +103,6 @@ export default function OutslipUpload() {
     }, [isLoading]);
     useEffect(() => {
         setIsLoading(true);
-
         const checkPermissions = async () => {
             await verifyCameraPermissions();
         };
@@ -137,9 +134,8 @@ export default function OutslipUpload() {
                 setSerialQuantities(initialSerialQuantities);
                 setOutslipDetail(response.data.tripdetails[0]);
                 setTripBranch(response.data.branches[0]);
-                setIsLoading(false);
-
                 console.log("out", response.data.tripdetails[0]);
+                setIsLoading(false);
                 /* console.log("OCLE", ocrResults.length) */
             } catch (error) {
                 if (error.response.status === 401) {
@@ -157,13 +153,11 @@ export default function OutslipUpload() {
             navigation.setOptions({
                 headerShown: !(isCameraFullscreen || cameraPreview || isLoading),
             });
-
             return () => {
                 navigation.setOptions({
                     headerShown: true,
                 });
             };
-
         }, [isCameraFullscreen, cameraPreview, isLoading])
     );
     /* console.log("brara", tripBranch); */
@@ -303,7 +297,7 @@ export default function OutslipUpload() {
         return true;
     }
 
-    const handleOCR = async (index) => {
+    /* const handleOCR = async (index) => {
         setIsLoading(true);
 
         if (!images[index]) {
@@ -335,7 +329,7 @@ export default function OutslipUpload() {
         finally {
             setIsLoading(false);
         }
-    };
+    }; */
     const toggleItemExpansion = (itemId) => {
         setIsExpandedItems(prev => (Object.assign(Object.assign({}, prev), { [itemId]: !prev[itemId] })));
     };
@@ -440,91 +434,73 @@ export default function OutslipUpload() {
                 },
             });
             console.log('succrecv', receivingResponse);
+            const uploadPromises = images.map(async (imageUri, index) => {
+                if (!imageUri) return;
 
-            //UPLOADING SIDE
-            const formData = new FormData();
-            images.forEach((imageUri, index) => {
-                if (imageUri) {
-                    const imageType = imageUri.split('.').pop();  // Get the file extension
-                    const mimeType = `image/${imageType}`;  // Create the MIME type
+                const imageType = imageUri.split('.').pop();
+                const mimeType = `image/${imageType}`;
 
-                    formData.append('image', {
-                        uri: imageUri,
-                        type: mimeType,  // Use the dynamic MIME type
-                        name: `photo_${index}.${imageType}`,  // Use the correct file extension
-                    });
-                }
-            });
-            formData.append('trip_ticket_detail_id', trip_ticket_detail_id.toString());
-            formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
-            const createdDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            formData.append('created_date', createdDate);
-            formData.append('created_by', userId);
-            formData.append('branch_id', tripBranch.branch_id);
-
-            /* Watermarked formdata */
-            formData.append('branch_name', tripBranch.branch_name);
-            formData.append('ref_trans_no', outslipDetail.ref_trans_no);
-            formData.append('trans_name', outslipDetail.trans_name);
-            formData.append('username', username);
-            if (Array.isArray(ocrResults)) {
-                ocrResults.forEach((ocrResult) => {
-                    formData.append('upload_text', ocrResult);
+                const formData = new FormData();
+                formData.append('image', {
+                    uri: imageUri,
+                    type: mimeType,
+                    name: `photo_${index}.${imageType}`,
                 });
-            } else {
-                formData.append('upload_remarks', '');
-            }
-            console
-            if (Array.isArray(remarks)) {
-                remarks.forEach((remark) => {
-                    formData.append('upload_remarks', remark);
+                formData.append('trip_ticket_detail_id', trip_ticket_detail_id.toString());
+                formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
+                formData.append('created_date', new Date().toISOString().slice(0, 19).replace('T', ' '));
+                formData.append('created_by', userId);
+                formData.append('branch_id', tripBranch.branch_id);
+                formData.append('branch_name', tripBranch.branch_name);
+                formData.append('ref_trans_no', outslipDetail.ref_trans_no);
+                formData.append('trans_name', outslipDetail.trans_name);
+                formData.append('username', username);
+                formData.append('upload_text', ocrResults[index] || '');
+                formData.append('upload_remarks', remarks[index] || '');
+
+                return api.post('/outslipupload/', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        const progress = Math.round(
+                            (progressEvent.loaded / progressEvent.total) * 100
+                        );
+                        setUploadProgress(prev => ({
+                            ...prev,
+                            [index]: progress
+                        }));
+                    }
                 });
-            } else {
-                formData.append('upload_remarks', '');
-            }
-            console.log("paso", formData);
-            const response = await api.post('/outslipupload/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-
-
             });
+
+            // Wait for all image uploads to complete
+            await Promise.all(uploadPromises);
+
             Notifier.showNotification({
                 title: 'Success',
                 description: 'Outslip uploaded successfully',
                 duration: 3000,
             });
-            router.back()
-            console.log('succ', response.data);
-        }
-        catch (error) {
+
+            router.back();
+        } catch (error) {
             console.error('Error:', error);
 
-            if (error.response) {
-                console.log('Response Data:', error.response.data);
-                console.log('Response Status:', error.response.status);
-                console.log('Response Headers:', error.response.headers);
-
-                const details = error.response.data.details || [];
-                let errorMessage = 'Upload failed:\n';
-
-                details.forEach(detail => {
-                    const errors = detail.errors || {};
-                    errorMessage += `${detail.upload_image}: ${JSON.stringify(errors)}\n`;
-                });
-
-                Alert.alert('Upload Failed', JSON.stringify(error.response.data));
-                return;
-            }
-            if (error.response.status === 401) {
+            if (error.response?.status === 401) {
                 Alert.alert('Error', 'Your login session has expired. Please log in');
                 router.replace('/');
                 return;
             }
-        }
-        finally {
+            Alert.alert('Upload Failed', JSON.stringify(error.response.data));
+            return;
+            /*  Alert.alert(
+                 'Upload Error',
+                 'Failed to complete the upload. Please check your connection and try again.',
+                 [{ text: 'OK' }]
+             ); */
+        } finally {
             setIsLoading(false);
         }
     };
@@ -535,7 +511,19 @@ export default function OutslipUpload() {
 
 
             <SafeAreaView style={styles.container}>
-
+                {Object.entries(uploadProgress).map(([index, progress]) => (
+                    <View key={index} style={styles.progressContainer}>
+                        <Text>Uploading image {parseInt(index) + 1}: {progress}%</Text>
+                        <View style={styles.progressBar}>
+                            <View
+                                style={[
+                                    styles.progressFill,
+                                    { width: `${progress}%` }
+                                ]}
+                            />
+                        </View>
+                    </View>
+                ))}
                 {isCameraFullscreen && (
                     <View style={styles.fullscreenCameraContainer}>
                         <CameraView
@@ -681,10 +669,13 @@ export default function OutslipUpload() {
                                                         <View style={styles.expandedChevron}>
 
                                                             <Ionicons
-                                                                name={isExpandedItems[item.i_trans_no] ? "caret-down" : "caret-forward"}
+                                                                name={isExpandedItems[item.i_trans_no] ? "chevron-down" : "chevron-forward"}
                                                                 size={20}
                                                                 color="#666"
                                                             />
+                                                            <Text style={styles.expandedChevronText}>
+                                                                Edit Receiving Quantity
+                                                            </Text>
                                                         </View>
 
                                                     </TouchableOpacity>
@@ -1358,7 +1349,6 @@ const styles = StyleSheet.create({
     bodyColumn1: { //barcode
         width: '25%',
         alignSelf: 'center',
-
     },
     bodyColumn2: { // description
         width: '30%',
@@ -1372,6 +1362,7 @@ const styles = StyleSheet.create({
     },
     bodyColumn4: {
         width: '10%',
+        /* marginLeft: 20 */
         marginLeft: 5,
         alignSelf: 'center',
 
@@ -1403,14 +1394,24 @@ const styles = StyleSheet.create({
     expandedValue: {
         fontSize: 10,
         color: '#000',
-        /* textAlign: 'center', */
-
     },
     expandedQty: {
+        fontSize: 10,
+        /*  fontWeight: 'bold', */
         fontSize: 12,
         fontWeight: 500,
         textAlign: 'center',
         borderWidth: 0.5,
+    },
+    expandedChevron: {
+        backgroundColor: '#ffd33d',
+        flex: 1,
+        flexWrap: 'wrap',
+        flexDirection: 'row',
+    },
+    expandedChevronText: {
+        fontWeight: 300,
+        fontStyle: "italic",
     },
     expandedRemarks: {
         fontSize: 14,
@@ -1422,8 +1423,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffd33d',
         padding: 10,
     },
-    expandedChevron: {
-        backgroundColor: '#ffd33d',
-
+    progressContainer: {
+        marginVertical: 5,
+        padding: 10,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 5,
+    },
+    progressBar: {
+        height: 10,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 5,
+        marginTop: 5,
+        overflow: 'hidden',
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#4CAF50',
     },
 });

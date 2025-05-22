@@ -15,21 +15,31 @@ from datetime import timedelta
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_URL = '/static/'
+
 MEDIA_URL = '/media/'  # URL prefix for media files
-MEDIA_ROOT = BASE_DIR / 'media'
 #MEDIA_ROOT = '//192.168.1.200/Central Sourcecodes/DEV/Fed/ASNUpload'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-w7qolrc)hfzt-l80rvs-p*mzknxh^soeuy*e^=2@9n2(-1tj=q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True 
+if DEBUG:
+        STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 #ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "192.168.126.56", "mis-federick"]
 ALLOWED_HOSTS = ['*']
 BASE_URL = "http://176.16.1.126:8000/api"
+#BASE_URL = "http://winterpinegroup.com.ph:8000/api"
 # Application definition
 
 INSTALLED_APPS = [
@@ -47,7 +57,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "api.User"
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'user_id',
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1)
 }
 REST_AUTH = {
@@ -86,6 +96,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.70.184:8081",
     "http://192.168.126.56:8081",# Allow your frontend origin
     # Add this for development if needed
+    "http://192.168.0.29:8000",
+
 ]
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = False
@@ -127,10 +139,14 @@ DATABASES = {
  
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'test_bootstrap2_ret',
+        'NAME': 'bootstrap2_ret_training_052025',
         'USER': 'sa',
-        'PASSWORD':'1tsl@SAP',
-        'HOST':'192.168.1.200',
+        'PASSWORD':'WTP9@!979#100420!9',
+        'HOST':'192.168.0.33\MSSQLTESTSERVER',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'extra_params': 'Encrypt=no;TrustServerCertificate=yes',
+        },
     }
 }
 
@@ -181,7 +197,6 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

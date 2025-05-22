@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [errorData, setErrorData] = useState(null);
-
   useEffect(() => {
     const backAction = () => {
       Alert.alert('', 'Are you sure you want to exit the app?', [
@@ -105,7 +104,6 @@ export default function LoginPage() {
         <Image style={styles.imageLogo} source={icon} />
       </View>
       <Text style={styles.text}>Delivery Monitoring System</Text>
-
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -137,10 +135,10 @@ export default function LoginPage() {
 
       <View style={styles.version}>
         <Text style={styles.versionText}>
-          v3.7.0 - DEV
+          v3.0.0 - TEST
         </Text>
         <Text style={styles.versionText2}>
-         Updated: 4/23/25
+          Updated: 5/15/25
         </Text>
       </View>
     </View>

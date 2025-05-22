@@ -32,20 +32,20 @@ export default function TripBranch() {
                 setTripBranch(response.data);
                 setLoading(false);
                 setTripTicket(JSON.parse(trip as string));
-                console.log("Parsed trip:", JSON.parse(trip as string));
                 console.log("tite", response.data);
-
             } catch (error) {
                 console.error(error);
                 setLoading(false);
             }
         };
-        console.log(1, trip);
 
         fetchData();
     }, []);
-    const filteredTrips = tripBranch.filter((trip) =>
-        trip.branch_id.toString().includes(searchQuery));
+    const filteredTrips = tripBranch.filter((trip) => {
+        const lowerBranch = trip.branch_name.toString().toLowerCase() || '';
+        const query = searchQuery.toLowerCase();
+        return lowerBranch.includes(query);
+    });
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -74,6 +74,15 @@ export default function TripBranch() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Trip Ticket #{tripTicket?.trip_ticket_no}</Text>
+            <TextInput
+                style={styles.searchBar}
+                placeholder="Search by Branch Name"
+                value={searchQuery}
+                onChangeText={(text) => {
+                    setSearchQuery(text);
+                    setCurrentPage(1); // Reset to first page on new search
+                }}
+            />
             <FlatList
                 data={currentItems}
                 numColumns={1}

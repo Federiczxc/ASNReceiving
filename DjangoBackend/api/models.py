@@ -28,6 +28,7 @@ class User(AbstractBaseUser):
 
 class TripTicketModel(models.Model):
     trip_ticket_id = models.BigIntegerField(primary_key=True)
+    trip_ticket_no = models.BigIntegerField()
     vehicle_id =models.BigIntegerField()
     plate_no = models.CharField(max_length=20)
     entity_id = models.BigIntegerField()
@@ -37,6 +38,7 @@ class TripTicketModel(models.Model):
     dispatched_by = models.BigIntegerField()
     remarks = models.TextField()
     is_posted = models.BooleanField()
+    is_final_trip = models.BooleanField()
     class Meta:
         db_table = 'scm_tr_trip_ticket'
         managed = False
@@ -58,7 +60,7 @@ class TripDetailsModel(models.Model):
     trip_ticket_detail_id = models.BigAutoField(primary_key=True)
     ref_trans_date = models.DateTimeField()
     ref_trans_id = models.BigIntegerField()
-    ref_trans_code_id = models.BigIntegerField()
+    ref_trans_no = models.CharField(max_length=255)
     full_address = models.TextField()
     trans_name = models.CharField(max_length=255)
     remarks = models.TextField()
@@ -66,7 +68,7 @@ class TripDetailsModel(models.Model):
     document_amount = models.DecimalField(max_digits=18, decimal_places=2)
     detail_volume = models.DecimalField(max_digits=18, decimal_places=6)
     is_posted = models.BooleanField()
-    
+
     
     class Meta:
         db_table = 'scm_tr_trip_ticket_detail'
@@ -129,7 +131,8 @@ class OutslipImagesModel(models.Model):
     is_candis = models.BooleanField(default=False)
     is_posted = models.BooleanField(default=False)
     class Meta:
-        db_table = 'scm_tr_outslip_to_images'
+        #db_table = 'scm_tr_outslip_to_images'
+        db_table = 'scm_tr_trip_ticket_detail_images'
         managed = True
     """     constraints = [
                 models.UniqueConstraint(fields=['server_id', 'trip_ticket_id'], name='outslip_images_composite_pk') #not working so manual it sa mssql
@@ -169,8 +172,10 @@ class TripTicketBranchLogsModel(models.Model):
         ]
 """
 
-class TripTicketDetailReceivingModel:
+
+class TripTicketDetailReceivingModel(models.Model):
     server_id = models.BigIntegerField(default=1)
+    receiving_id = models.BigAutoField(primary_key=True) #identity
     trip_ticket_id = models.BigIntegerField() 
     trip_ticket_detail_id = models.BigIntegerField()
     ref_trans_id = models.BigIntegerField()
@@ -197,3 +202,7 @@ class TripTicketDetailReceivingModel:
     is_fap = models.BooleanField(default=False)
     is_candis = models.BooleanField(default=False)
     is_posted = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'scm_tr_trip_ticket_detail_receiving'
+        managed = False

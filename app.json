@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "WTPDMS",
-    "slug": "WTPDMS",
+    "name": "WTPDMS-TEST",
+    "slug": "ASNReceiving",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/winterpine-icon.png",
@@ -34,7 +34,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.example.yourapp",
+      "package": "com.example.ASNReceiving",
       "networkSecurityConfig": true
     },
     "web": {
@@ -57,7 +57,9 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],

@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Button, Alert, LogBox, ActivityIndicator, BackHandler, Modal, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Button, Alert, LogBox, ActivityIndicator, BackHandler, Modal, FlatList, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../../api';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
@@ -32,8 +32,8 @@ interface TripDetails {
     barcode: string;
     item_description: string;
     item_qty: number;
+    is_posted: boolean;
     detail_volume: number;
-    is_posted: boolean,
     items: Item[];
 }
 interface BranchDetails {
@@ -58,21 +58,35 @@ export default function TripListDetails() {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
 
-
     const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+        const startTime = Date.now();
+
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert('Error', 'Location permission denied');
             return null;
         }
+
         try {
-            const location = await Location.getCurrentPositionAsync({});
-            const { latitude, longitude } = location.coords;
-            console.log('Latitude', latitude);
-            console.log('Longitude', longitude);
+            const lastKnown = await Location.getLastKnownPositionAsync();
+            if (lastKnown) {
+                const quickTime = Date.now() - startTime;
+                console.log(`⚡ Used last known location: ${quickTime} ms`);
+                const { latitude, longitude } = lastKnown.coords;
+                return { latitude, longitude };
+            }
+
+            const gpsStart = Date.now();
+            const freshLocation = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Low,
+            });
+            const gpsTime = Date.now() - gpsStart;
+            console.log(`📡 Fetched new GPS location: ${gpsTime} ms`);
+
+            const { latitude, longitude } = freshLocation.coords;
             return { latitude, longitude };
         } catch (error) {
-            console.error('Error getting location:', error);
+            console.error('❌ Error getting location:', error);
             Alert.alert('Error', 'Failed to get location');
             return null;
         }
@@ -81,6 +95,7 @@ export default function TripListDetails() {
     // Convert to number if needed
     const branch_id = id ? parseInt(id as string, 10) : null;
     const tripId = trip_ticket_id ? parseInt(trip_ticket_id as string, 10) : null;
+
 
     useEffect(() => {
         const backAction = () => {
@@ -107,7 +122,7 @@ export default function TripListDetails() {
         );
 
         return () => backHandler.remove();
-    }, [loading ]);
+    }, [loading]);
     useFocusEffect(
         useCallback(() => {
             const fetchData = async () => {
@@ -131,7 +146,7 @@ export default function TripListDetails() {
                     })
                     const hasClockedIn = timeInCheck.data.has_clocked_in || false;
                     const hasClockedOut = timeInCheck.data.has_clocked_out
-                    console.log('atta', hasClockedIn)
+                    /* console.log('atta', hasClockedIn) */
                     setHasClockIn(hasClockedIn)
                     setHasClockOut(hasClockedOut)
                     setLoading(false);
@@ -144,8 +159,8 @@ export default function TripListDetails() {
         }, [trip_ticket_id, branch_id])
     );
     const filteredTrips = TripDetails.filter((trip) =>
-        trip.trip_ticket_id.toString().includes(searchQuery));
-    console.log("tritri", trip_ticket_id, branch_id);
+        trip.ref_trans_no.toString().includes(searchQuery));
+    /* console.log("tritri", trip_ticket_id, branch_id); */
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredTrips.slice(indexOfFirstItem, indexOfLastItem);
@@ -160,12 +175,16 @@ export default function TripListDetails() {
         }
     };
     const timeIn = async () => {
+        const start = Date.now();
+        let locStart = 0, locEnd = 0, reqStart = 0, reqEnd = 0;
         try {
             setLoading(true)
             const userData = await AsyncStorage.getItem('user_data');
             const userId = userData ? JSON.parse(userData).user_id : null;
             // Get the user's current location
+            locStart = Date.now();
             const location = await getCurrentLocation();
+            locEnd = Date.now();
             if (!location) {
                 Alert.alert('Error', 'Failed to get location');
                 return;
@@ -176,9 +195,9 @@ export default function TripListDetails() {
             // Get additional location data (e.g., address) using LocationIQ or another service
             const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
             const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
-            console.log("titest2 ", currentDate);
-            console.log("titesmet2 ", currentTime);
-            console.log("tripticketinin", trip_ticket_id, id);
+            /*    console.log("titest2 ", currentDate);
+               console.log("titesmet2 ", currentTime);
+               console.log("tripticketinin", trip_ticket_id, id); */
             const clockInData = {
                 latitude_in: latitude,
                 longitude_in: longitude,
@@ -186,11 +205,13 @@ export default function TripListDetails() {
                 trip_ticket_id: trip_ticket_id,
                 branch_id: id,
             };
+            reqStart = Date.now();
             const postResponse = await api.post("/clock-in/", clockInData, {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                 },
             });
+            reqEnd = Date.now();
             console.log("clockindata", postResponse.data);
             setHasClockIn(true);
             Alert.alert("Attendance!", "You have successfully clocked in today");
@@ -208,41 +229,50 @@ export default function TripListDetails() {
 
         }
         finally {
+            const total = Date.now() - start;
+            console.log("⏱ Benchmark Timings:");
+            console.log("🔍 Location retrieval:", locEnd - locStart, "ms");
+            console.log("📤 API request:", reqEnd - reqStart, "ms");
+            console.log("⏱ Total timeOut():", total, "ms");
             setLoading(false)
         }
     };
     const timeOut = async () => {
+        const start = Date.now();
+        let locStart = 0, locEnd = 0, reqStart = 0, reqEnd = 0;
         try {
             setLoading(true)
             const accessToken = await AsyncStorage.getItem('access_token');
-            const userData = await AsyncStorage.getItem('user_data');
-            const userId = userData ? JSON.parse(userData).user_id : null;
+            locStart = Date.now();
             const location = await getCurrentLocation();
+            locEnd = Date.now();
             if (!location) {
                 Alert.alert('Error', 'Failed to get location');
                 return;
             }
             const { latitude, longitude } = location;
-            console.log("TUITEUTEITIE", location, latitude, longitude);
+            console.log("Location Retrieved", location);
             // Get additional location data (e.g., address) using LocationIQ or another service
-            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
-            console.log("titest2 ", currentDate);
+            /* const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' '); */
+            /* console.log("titest2 ", currentDate);
             console.log("titesmet2 ", currentTime);
             console.log("tripticketinin", trip_ticket_id, id);
-            console.log("locloc", latitude, longitude, currentDate);
+            console.log("locloc", latitude, longitude, currentDate); */
             const clockOutData = {
                 latitude_out: latitude,
                 longitude_out: longitude,
                 trip_ticket_id: trip_ticket_id,
                 branch_id: id
             }
+            reqStart = Date.now();
             const postResponse = await api.post("/clock-out/", clockOutData, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                 },
             });
-            console.log("clockindata", postResponse.data)
+            reqEnd = Date.now();
+            console.log("clockindata", postResponse.data);
             setHasClockOut(true);
             Alert.alert("Attendance!", "You have successfully time out!");
         } catch (error: any) {
@@ -258,9 +288,16 @@ export default function TripListDetails() {
         }
 
         finally {
+            const total = Date.now() - start;
+            console.log("⏱ Benchmark Timings:");
+            console.log("🔍 Location retrieval:", locEnd - locStart, "ms");
+            console.log("📤 API request:", reqEnd - reqStart, "ms");
+            console.log("⏱ Total timeOut():", total, "ms");
             setLoading(false)
+
         }
     };
+
     /* const timeOut = async () => {
         try {
             const accessToken = await AsyncStorage.getItem('access_token');
@@ -315,6 +352,16 @@ export default function TripListDetails() {
         <View style={styles.container}>
             <View style={styles.headerContainer}>
                 <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
+                <TextInput
+                    style={styles.searchBar}
+                    placeholder="Search by Outslip #"
+                    keyboardType="numeric"
+                    value={searchQuery}
+                    onChangeText={(text) => {
+                        setSearchQuery(text);
+                        setCurrentPage(1); // Reset to first page on new search
+                    }}
+                />
                 <View style={styles.clockContainer}>
 
                     {hasClockIn ? (
@@ -365,7 +412,9 @@ export default function TripListDetails() {
                                 <Ionicons style={styles.attendanceIcon} name={"exit-outline"} size={19} />
                             </View>
                         </TouchableOpacity>)}
+
                 </View>
+
             </View>
             <FlatList
                 data={currentItems}
@@ -384,6 +433,7 @@ export default function TripListDetails() {
                             })
                         }
                         disabled={item.is_posted === true}
+
                     >
                         <View style={styles.ticketContainer}>
                             <View style={[styles.ticketHeader, { backgroundColor: item.is_posted === true ? '#25292e' : '#4caf50' }
@@ -521,6 +571,12 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
+    cancelButton: {
+        backgroundColor: '#ccc',
+    },
+    confirmButton: {
+        backgroundColor: '#4CAF50',
+    },
     attendanceButton: {
         borderWidth: 1.5,
         flexDirection: 'row',
@@ -529,12 +585,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 10,
         borderColor: 'green',
         marginBottom: 5,
-    },
-    cancelButton: {
-        backgroundColor: '#ccc',
-    },
-    confirmButton: {
-        backgroundColor: '#4CAF50',
     },
     attendanceButton2: {
         borderWidth: 1.5,

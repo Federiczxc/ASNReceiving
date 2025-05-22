@@ -101,10 +101,10 @@ export default function Profile() {
             </View>
             <View style={styles.version}>
                 <Text style={styles.versionText}>
-                    v3.7.0 - DEV
+                    v3.0.0 - TEST 
                 </Text>
                 <Text style={styles.versionText2}>
-                    Updated: 4/23/25
+                    Updated: 5/15/25
                 </Text>
             </View>
         </View>
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 5,
+        elevation: 3,
         alignItems: 'center',
     },
     greeting: {

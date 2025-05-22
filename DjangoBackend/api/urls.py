@@ -1,10 +1,13 @@
-from django.urls import path
+from django.urls import path, include, re_path
 from .views import *
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
-from django.conf.urls.static import static
+from django.conf import settings
 
+from django.views.static import serve
+from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns # new
 urlpatterns = [
-    path('ocr/', OCRView.as_view(), name='ocr'),
+    #path('ocr/', OCRView.as_view(), name='ocr'),
     path('login/', LoginView.as_view(), name='login'),
     path('register/', RegisterView.as_view(), name='register'),
     path('profile/', ProfileView.as_view(), name='profile'),
@@ -23,7 +26,8 @@ urlpatterns = [
     path('clock-in/', ClockInAttendance.as_view(), name='clockinattendance'),
     path('check-clock-in/', CheckClockInView.as_view(), name='checkclockin'),
     path('clock-out/', ClockOutAttendance.as_view(), name='clockoutattendance'),
-    path('manage-attendance/', ManageAttendanceView.as_view(), name='attendanceview')
+    path('manage-attendance/', ManageAttendanceView.as_view(), name='attendanceview'),
+    path('trip-ticket-receive/', TripTicketReceiveView.as_view(), name='receiveView'),
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 ]   
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
