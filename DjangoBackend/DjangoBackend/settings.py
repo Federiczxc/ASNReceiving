@@ -28,7 +28,7 @@ MEDIA_URL = '/media/'  # URL prefix for media files
 SECRET_KEY = 'django-insecure-w7qolrc)hfzt-l80rvs-p*mzknxh^soeuy*e^=2@9n2(-1tj=q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True 
+DEBUG = False
 if DEBUG:
         STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 else:
@@ -39,6 +39,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 #ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "192.168.126.56", "mis-federick"]
 ALLOWED_HOSTS = ['*']
 BASE_URL = "http://176.16.1.126:8000/api"
+
 #BASE_URL = "http://winterpinegroup.com.ph:8000/api"
 # Application definition
 
@@ -52,7 +53,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'api',
     'rest_framework',
-    'rest_framework_simplejwt',
+    'rest_framework_simplejwt',     
 ]
 AUTH_USER_MODEL = "api.User"
 SIMPLE_JWT = {
@@ -67,6 +68,7 @@ REST_AUTH = {
 }
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.passwordAuth.MultiDBJWTAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         # Ensure JWT is configured correctly
     ),
@@ -97,6 +99,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.126.56:8081",# Allow your frontend origin
     # Add this for development if needed
     "http://192.168.0.29:8000",
+    "http://localhost:5173" ,
+    "http://127.0.0.1:5173",
 
 ]
 CORS_ORIGIN_ALLOW_ALL = True
@@ -147,15 +151,24 @@ DATABASES = {
             'driver': 'ODBC Driver 17 for SQL Server',
             'extra_params': 'Encrypt=no;TrustServerCertificate=yes',
         },
+        'BASE_URL': 'http://176.16.1.126:8000/api' 
+    },
+    'tsl_db': {
+        'ENGINE': 'mssql',
+        'NAME': 'test_bootstrap2_tsl',
+        'USER': 'sa',
+        'PASSWORD':'WTP9@!979#100420!9',
+        'HOST':'192.168.0.33\MSSQLTESTSERVER',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'extra_params': 'Encrypt=no;TrustServerCertificate=yes',
+        },
+        'BASE_URL': 'http://176.16.1.126:8000/tsl'
     }
 }
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-AUTHENTICATION_BACKENDS = [
-    'api.DjangoBackend.passwordAuth',  # Path to your custom backend
-]
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

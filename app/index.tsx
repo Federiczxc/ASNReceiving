@@ -135,7 +135,7 @@ export default function LoginPage() {
 
       <View style={styles.version}>
         <Text style={styles.versionText}>
-          v3.1.0 - TEST
+          v3.1.0 - TEST-M RET
         </Text>
         <Text style={styles.versionText2}>
           Updated: 5/22/25

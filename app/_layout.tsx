@@ -1,7 +1,41 @@
 import { Stack } from "expo-router";
 import { NotifierWrapper } from 'react-native-notifier';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Updates from 'expo-updates'
+import { Alert } from "react-native";
+import React, { useEffect } from "react"
 export default function RootLayout() {
+
+  async function checkForUpdates() {
+    try {
+      const update = await Updates.checkForUpdateAsync();
+
+      if (update.isAvailable) {
+        Alert.alert(
+          'Update Available',
+          'A new version of the app is available. Restart app to update?\n\nApp will still auto-update next launch.',
+          [
+            { text: 'Later', style: 'cancel' },
+            {
+              text: 'Update now',
+              onPress: async () => {
+                await Updates.fetchUpdateAsync();
+                Updates.reloadAsync(); // Force restart
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Update check failed:', error);
+    }
+  }
+
+  // Call in useEffect or App component
+  useEffect(() => {
+    checkForUpdates();
+  }, []);
+
   return (
 
     <GestureHandlerRootView>
@@ -24,7 +58,7 @@ export default function RootLayout() {
             name="index"
             options={{
               title: '', // Set the title here
-              headerShown: false 
+              headerShown: false
             }}
           />
           <Stack.Screen

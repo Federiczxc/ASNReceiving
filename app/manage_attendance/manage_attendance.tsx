@@ -14,6 +14,7 @@ interface Attendance {
     trip_ticket_id: number;
     trip_ticket_no: number;
     branch_id: string;
+    branch_name: string;
     time_in: number;
     time_out: string;
     location_in: string;
@@ -122,12 +123,12 @@ export default function ManageAttendance() {
                                 <View style={styles.ticketHeader}>
                                     <TouchableOpacity onPress={() => router.push({
                                         pathname: '/trip_list_details/[id]',
-                                        params: { id: item.branch_details.branch_id, trip_ticket_id: item.trip_ticket_id },
+                                        params: { id: item.branch_id, trip_ticket_id: item.trip_ticket_id },
                                     })}>
 
                                         <Text style={styles.tripId}> Log ID: {item.log_id} </Text>
                                         <Text style={styles.footerText}> Trip Ticket #{item.trip_ticket_no} </Text>
-                                        <Text style={styles.footerText}> Branch : {item.branch_details.branch_name} </Text>
+                                        <Text style={styles.footerText}> Branch : {item.branch_name} </Text>
                                     </TouchableOpacity>
                                 </View>
                                 <View style={styles.ticketBody}>

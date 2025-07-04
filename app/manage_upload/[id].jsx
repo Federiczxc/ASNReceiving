@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox'
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+
 import ImageViewer from 'react-native-image-zoom-viewer';
 import Carousel from 'react-native-reanimated-carousel';
 import { LogBox } from 'react-native';

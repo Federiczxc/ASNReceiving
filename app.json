@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "WTPDMS-TEST",
+    "name": "WTPDMS-TESTRET",
     "slug": "ASNReceiving",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,7 +34,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.example.ASNReceiving",
+      "package": "com.TEST.WTPDMSRET",
       "networkSecurityConfig": true
     },
     "web": {

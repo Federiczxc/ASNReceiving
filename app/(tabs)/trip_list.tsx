@@ -7,7 +7,6 @@ import { format } from 'date-fns';
 interface Trip {
     trip_ticket_id: number;
     trip_ticket_no: number;
-
     plate_no: string;
     remarks: string;
     entity_name: string;
