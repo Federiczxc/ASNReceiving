@@ -38,7 +38,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 #ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2", "176.16.1.126",  "192.168.1.200", "103.240.120.34", "192.168.5.251", "192.168.70.190", "192.168.70.184", "192.168.126.56", "mis-federick"]
 ALLOWED_HOSTS = ['*']
-BASE_URL = "http://176.16.1.126:8000/api"
+BASE_URL = "http://176.16.5.166:8000/api"
 
 #BASE_URL = "http://winterpinegroup.com.ph:8000/api"
 # Application definition
@@ -151,11 +151,11 @@ DATABASES = {
             'driver': 'ODBC Driver 17 for SQL Server',
             'extra_params': 'Encrypt=no;TrustServerCertificate=yes',
         },
-        'BASE_URL': 'http://176.16.1.126:8000/api' 
+        'BASE_URL': 'http://176.16.5.166:8000/api' 
     },
     'tsl_db': {
         'ENGINE': 'mssql',
-        'NAME': 'test_bootstrap2_tsl',
+        'NAME': 'bootstrap2_dms_distri',
         'USER': 'sa',
         'PASSWORD':'WTP9@!979#100420!9',
         'HOST':'192.168.0.33\MSSQLTESTSERVER',
@@ -163,7 +163,7 @@ DATABASES = {
             'driver': 'ODBC Driver 17 for SQL Server',
             'extra_params': 'Encrypt=no;TrustServerCertificate=yes',
         },
-        'BASE_URL': 'http://176.16.1.126:8000/tsl'
+        'BASE_URL': 'http://176.16.5.166:8000/tsl'
     }
 }
 # Password validation

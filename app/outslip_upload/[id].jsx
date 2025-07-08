@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Button, Modal, Dimensions, Image, TextInput, BackHandler, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Touchable, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location'
@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import BottomSheet, { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
 export default function OutslipUpload() {
     const [tripBranch, setTripBranch] = useState({
         branch_name: '',
@@ -56,6 +57,9 @@ export default function OutslipUpload() {
     const { id } = useLocalSearchParams();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isExpanded2, setIsExpanded2] = useState(true);
+    const [isExpanded3, setIsExpanded3] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
     const [isExpandedItems, setIsExpandedItems] = useState({});
 
     const trip_ticket_detail_id = id;
@@ -70,13 +74,41 @@ export default function OutslipUpload() {
     const [isCameraMode, setIsCameraMode] = useState(false);
     const [quantity, setQuantity] = useState({});
     const [serialQuantities, setSerialQuantities] = useState({});
-
+    const [receiver, setReceiver] = useState('');
     const [isCameraFullscreen, setIsCameraFullscreen] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
     const [cameraPreview, setCameraPreview] = useState(false);
     const [isChecked, setChecked] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [uploadProgress, setUploadProgress] = useState({});
+    const [page, setPage] = useState(1);
+    const pageSize = 25;
+    const [hasMore, setHasMore] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(''); //
+    const [receiverData, setReceiverData] = useState({
+        entity_id: null,
+        entity_name: '',
+    });
+
+    const bottomSheetRef = useRef(null);
+    const snapPoints = ['35%', '100%'];
+    const [selectedReceiver, setSelectedReceiver] = useState('');
+    const [receiverID, setReceiverID] = useState(0);
+
+    const openReceiverSheet = async () => {
+        if (receiverData.length === 0) {
+            await fetchReceiver(1);
+        }
+        bottomSheetRef.current?.expand();
+    }
+
+    const handleReceiverSelect = (id, receiver) => {
+        console.log("rerecsec", id, receiver);
+        setSelectedReceiver(receiver);
+        setReceiverID(id);
+        bottomSheetRef.current?.close();
+    }
     useEffect(() => {
         const backAction = () => {
             Alert.alert('', 'Are you sure you want to go back to previous page? All unsaved changes will be lost', [
@@ -148,6 +180,42 @@ export default function OutslipUpload() {
         };
         fetchData();
     }, []);
+
+    const fetchReceiver = async (pageNum = page) => {
+        if (isLoadingMore) return;
+        try {
+            setIsLoadingMore(true);
+            const response = await api.get('/receiverlist/', {
+                params: {
+                    page: pageNum,
+                    page_size: pageSize,
+                    search: debouncedSearchQuery
+                }
+            });
+            setReceiverData(prev =>
+                pageNum === 1
+                    ? response.data.results
+                    : [...prev, ...response.data.results]
+            );
+            setHasMore(!!response.data.next);
+            console.log("recrec", response.data.results);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
+    useEffect(() => {
+        if (debouncedSearchQuery !== searchQuery) {
+            setDebouncedSearchQuery(searchQuery);
+            setPage(1);
+            setReceiverData([]);
+            setHasMore(true);
+            if (bottomSheetRef.current?.expand) {
+                fetchReceiver(1);
+            }
+        }
+    }, [searchQuery]);
     useFocusEffect(
         useCallback(() => {
             navigation.setOptions({
@@ -214,13 +282,13 @@ export default function OutslipUpload() {
         }
     }
     const saveCapturedPicture = async (index) => {
-        console.log("cacap", index);
-        console.log("photo.rar", capturedImage);
+        /* console.log("cacap", index);
+        console.log("photo.rar", capturedImage); */
         let newImages = [...images];
         newImages[index] = capturedImage;
         setImages(newImages);
         setIsCameraFullscreen(false);
-        console.log("setImags", newImages);
+        /* console.log("setImags", newImages); */
         setCameraPreview(false)
     }
     const retakePicture = () => {
@@ -232,7 +300,7 @@ export default function OutslipUpload() {
         setImages([...images, null]); // Add a new empty slide
         setOcrResults([...ocrResults, '']);
         setRemarks([...remarks, '']);
-        console.log("imaima", images)
+        /* console.log("imaima", images) */
 
         requestAnimationFrame(() => {
             Notifier.showNotification({
@@ -340,7 +408,9 @@ export default function OutslipUpload() {
             setIsLoading(false);
             return;
         }
-
+        if (!receiver) {
+            Alert.alert('Error', 'Receiver is required. Please input who received the outslip');
+        }
         /*  Object.entries(serialQuantities).forEach(([serbat_id, qty]) => {
              formData.append(`serials[${serbat_id}]`, qty);
          }); */
@@ -350,9 +420,9 @@ export default function OutslipUpload() {
         const userId = userData ? JSON.parse(userData).user_id : null;
         const userObject = userData ? JSON.parse(userData) : null;
         const username = userObject?.username;
-        console.log("tite", quantity);
+        //console.log("tite", quantity);
 
-        console.log('acotot', userId, outslipDetail.trip_ticket_id, outslipDetail.branch_id,);
+        //console.log('acotot', userId, outslipDetail.trip_ticket_id, outslipDetail.branch_id,);
         try {
             //CHECK CHECKIN
 
@@ -367,9 +437,9 @@ export default function OutslipUpload() {
                 },
             })
 
-            console.log('aa', timeInCheck.data)
+            //console.log('aa', timeInCheck.data)
             const hasClockedIn = timeInCheck.data.has_clocked_in || false;
-            console.log('dad', hasClockedIn);
+            //console.log('dad', hasClockedIn);
 
             if (!hasClockedIn) {
                 const location = await getCurrentLocation();
@@ -391,7 +461,7 @@ export default function OutslipUpload() {
                         'Authorization': `Bearer ${accessToken}`,
                     },
                 })
-                console.log('ti', clockInResponse)
+                //console.log('ti', clockInResponse)
             }
             const receivingData = outslipDetail.items.flatMap(item => {
                 if (!Array.isArray(item.serial_details)) return [];
@@ -423,8 +493,8 @@ export default function OutslipUpload() {
             });
             const receivingForm = new FormData();
             receivingForm.append('receiving_data', JSON.stringify(receivingData));
-            console.log("erere", receivingData);
-            console.log("recrec", receivingForm);
+            //console.log("erere", receivingData);
+            //console.log("recrec", receivingForm);
 
 
             const receivingResponse = await api.post('/trip-ticket-receive/', receivingForm, {
@@ -929,18 +999,99 @@ export default function OutslipUpload() {
                                         </TouchableOpacity>
 
                                     </View>
-                                    <TouchableOpacity style={styles.button2} onPress={() => setModalVisible(true)}>
-                                        <Text style={styles.buttonText} >Submit</Text>
-                                    </TouchableOpacity>
+
                                 </>
                             )}
 
                         </View>
                     </View>
 
-                    {/* Buttons Section */}
+                    <View style={styles.container3}>
+
+                        <View style={styles.imageContainer}>
+
+                            <TouchableOpacity onPress={() => setIsExpanded3(!isExpanded3)} activeOpacity={0.7}>
+                                <View style={styles.ticketHeader}>
+                                    <Text style={styles.tripId}>Other Details</Text>
+                                </View>
+                                <Ionicons
+                                    name={isExpanded3 ? "chevron-down" : "chevron-forward"}
+                                    size={20}
+                                    color="#666"
+                                    style={{ alignSelf: 'center' }}
+                                />
+
+                            </TouchableOpacity>
+                            {isExpanded3 && (
+                                <>
+                                    <View style={styles.receiveView}>
+
+                                        <TouchableOpacity
+                                            onPress={openReceiverSheet}
+                                            style={styles.receiverSelector}
+                                        >
+                                            <Text style={styles.receiverSelectorText}>
+                                                {selectedReceiver || 'Select Receiver'}
+                                            </Text>
+                                            <Ionicons name="chevron-down" size={20} color="gray" />
+                                        </TouchableOpacity>
+
+                                    </View>
+
+                                    <TouchableOpacity style={styles.button2} onPress={() => setModalVisible(true)}>
+                                        <Text style={styles.buttonText} >Submit</Text>
+                                    </TouchableOpacity>
+
+                                </>
+                            )}
+
+                        </View>
+                    </View>
 
                 </ScrollView >
+                <BottomSheet
+                    ref={bottomSheetRef}
+                    index={-1}
+                    snapPoints={snapPoints}
+                    enablePanDownToClose
+                >
+                    <Text style={styles.sheetTitle}>Select Receiver</Text>
+                    <TextInput
+                        style={styles.searchBar}
+                        placeholder='Search Receiver'
+                        value={searchQuery}
+                        onChangeText={setSearchQuery} />
+                    <BottomSheetFlatList
+                        data={receiverData}
+                        keyExtractor={(item) => item.entity_id.toString()}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                style={styles.receiverItem}
+                                onPress={() => handleReceiverSelect(item.entity_id, item.entity_name)}
+                            >
+                                <Text style={styles.receiverText}>{item.entity_name}</Text>
+                                {selectedReceiver === item.entity_name && (
+                                    <Ionicons name="checkmark" size={20} color="green" />
+                                )}
+                            </TouchableOpacity>
+                        )}
+                        onEndReached={() => {
+                            if (!isLoadingMore && hasMore) {
+                                setPage(prev => prev + 1);
+                                console.log("endreac");
+                            }
+                        }}
+                        onEndReachedThreshold={0.5}
+                        refreshing={isLoadingMore}
+                        ListFooterComponent={
+                            isLoadingMore ? (
+                                <View style={{ padding: 50 }}>
+                                    <ActivityIndicator size="small" color="#0000ff" />
+                                </View>
+                            ) : null
+                        }
+                    />
+                </BottomSheet>
             </SafeAreaView>
         </SafeAreaProvider >
     );
@@ -1439,5 +1590,64 @@ const styles = StyleSheet.create({
     progressFill: {
         height: '100%',
         backgroundColor: '#4CAF50',
+    },
+    receiveView: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        width: '100%',
+        alignItems: 'center',
+        marginBottom: 5,
+        position: 'relative',
+    },
+    receiverSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        padding: 10,
+        marginHorizontal: 20,
+        marginVertical: 5,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    receiverSelectorText: {
+        fontSize: 16,
+        color: '#333',
+    },
+    searchBar: {
+        height: 45,
+        width: '95%',
+        alignSelf: 'center',
+        borderColor: '#ddd',
+        borderWidth: 1,
+        borderRadius: 5,
+        marginBottom: 10,
+        paddingHorizontal: 10,
+        backgroundColor: '#fff',
+    },
+    sheetTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    receiverItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    receiverText: {
+        fontSize: 14,
     },
 });

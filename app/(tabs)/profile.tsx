@@ -155,7 +155,6 @@ const styles = StyleSheet.create({
     },
     greeting: {
         fontSize: 22,
-        color: '#ffd33d',
         fontWeight: 'bold',
         marginBottom: 10,
     },
@@ -193,7 +192,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         backgroundColor: '#25292e',
         color: '#fff',
-        width: '35%',
+        width: '45%',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: 14,

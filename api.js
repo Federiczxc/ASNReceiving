@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import router from 'expo-router';
 //const API_URL = 'http://176.16.1.126:8000/api';
-const API_URL = 'http://winterpinegroup.com.ph:8001/api';
+const API_URL = 'http://176.16.5.166:8000/api';
+//const API_URL = 'http://winterpinegroup.com.ph:8001/api';
 //10.0.2.16
 const api = axios.create({
     baseURL: API_URL,
