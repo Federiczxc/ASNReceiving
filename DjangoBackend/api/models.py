@@ -329,4 +329,13 @@ class MatrixStatusModel(models.Model):
     class Meta:
         db_table = 'sys_matrix_status'
         managed = False
-        
+
+class AuthorizedReceiverModel(models.Model):
+    branch_receiver_id = models.AutoField(primary_key=True)
+    branch_id = models.BigIntegerField()
+    entity_id = models.BigIntegerField()
+    entity_name = models.CharField(max_length=255)
+    
+    class Meta:
+        db_table = 'fin_mf_branch_receiver'
+        managed = False    

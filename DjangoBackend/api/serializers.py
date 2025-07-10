@@ -115,3 +115,8 @@ class SerialFullCountScanSerializer(serializers.ModelSerializer):
     class Meta:
         model = SerialFullCountScanModel
         fields = '__all__'
+        
+class AuthorizedReceiverSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuthorizedReceiverModel
+        fields = '__all__'

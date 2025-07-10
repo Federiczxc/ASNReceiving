@@ -669,6 +669,8 @@ class UploadOutslipView(APIView):
         ref_trans_no = request.data.get('ref_trans_no')
         trans_name = request.data.get('trans_name')
         username = request.data.get('username')
+        received_by = request.data.get('received_by')
+        
         db_alias = get_db_alias(request)
         connection = connections[db_alias]
         logger.warning("concon", connection)
@@ -710,7 +712,6 @@ class UploadOutslipView(APIView):
           #      status=status.HTTP_400_BAD_REQUEST
           #  )
         if db_alias == 'tsl_db':
-            received_by = request.data.get('received_by')
             is_delivered_str = request.data.get('is_delivered')
             cancel_reason = request.data.get('cancel_reason')
             is_delivered = is_delivered_str.lower() == 'true' if isinstance(is_delivered_str, str) else bool(is_delivered_str)
@@ -745,10 +746,10 @@ class UploadOutslipView(APIView):
                         if has_clock_in:
                          
                             
-                            if db_alias =='tsl_db':
+                            if db_alias == 'tsl_db':
                                 watermarkedtext = f"Trip Ticket No:{trip_ticket_no}\nCustoner Name: {branch_name}\n Received by: {received_by}\nTransacstion Name: {trans_name}\nTrans No: {ref_trans_no}\nTaken by: {username}\nDate Taken: {timezone.now()}\nAddress: {has_clock_in.location_in}\nRemarks: {upload_remarks}"
                             else:
-                                watermarkedtext = f"Trip Ticket No:{trip_ticket_no}\nBranch Name: {branch_name}\nTransacstion Name: {trans_name}\nTrans No: {ref_trans_no}\nTaken by: {username}\nDate Taken: {timezone.now()}\nAddress: {has_clock_in.location_in}\nRemarks: {upload_remarks}"
+                                watermarkedtext = f"Trip Ticket No:{trip_ticket_no}\nBranch Name: {branch_name}\n Received by: {received_by}\nTransacstion Name: {trans_name}\nTrans No: {ref_trans_no}\nTaken by: {username}\nDate Taken: {timezone.now()}\nAddress: {has_clock_in.location_in}\nRemarks: {upload_remarks}"
                                 
                             #logger.warning(f"Raw location data:{has_clock_in.created_by} {coords} {address}")
                             draw = ImageDraw.Draw(img)
@@ -783,15 +784,13 @@ class UploadOutslipView(APIView):
                     )
                     uploaded_files.append(OutslipImagesSerializer(outslip_image).data)
                     trip_details.is_posted = True
+                    trip_details.received_by = received_by
+                    trip_details.received_date = timezone.now()
                     if db_alias == 'tsl_db':
                         logger.warning(f"dede {is_delivered}")
                         trip_details.is_delivered = is_delivered
                         if is_delivered == False:
                             trip_details.cancel_reason = cancel_reason
-                            trip_details.received_by = received_by
-                        else:
-                            trip_details.received_by = received_by
-                        trip_details.received_date = timezone.now()
                     trip_details.save() 
                 except Exception as e:
                     errors.append({'upload_image': upload_image.name, 'error':str(e)})
@@ -828,7 +827,8 @@ class ReceiverMFView (APIView): #RETAIL
     def get(self, request):
         db_alias = get_db_alias(request)
         try:
-            receivers = TripCustomerModel.objects.using(db_alias).all()
+            branch_id = request.query_params.get('branch_id')
+            receivers = AuthorizedReceiverModel.objects.using(db_alias).all().filter(branch_id=branch_id)
             search_query = request.query_params.get('search', None)
             if search_query:
                 receivers = receivers.filter(Q(entity_name__icontains=search_query))
@@ -1154,6 +1154,7 @@ class ClockOutAttendance(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+###WTP DMSR#########
 
 class TripTicketReports(APIView):
     permission_classes = [AllowAny]
@@ -1173,6 +1174,29 @@ class TripTicketReports(APIView):
             trip_ticket_id = trip_ticket.trip_ticket_id
             
             tripdetail_data = TripDetailsModel.objects.using(db_alias).filter(trip_ticket_id=trip_ticket_id)
+            branch_ids = tripdetail_data.values_list('branch_id', flat=True).distinct()
+            branch_statuses= {}
+            
+            for branch_id in branch_ids:
+                branch_details = tripdetail_data.filter(branch_id = branch_id)
+                total_items = branch_details.count()
+                total_branch = branch_ids.count()
+                posted_items = branch_details.filter(is_posted=1).count()
+                
+                if posted_items == 0:
+                    status = "noData"
+                
+                elif posted_items == total_items:
+                    status = "isDone"
+                else:
+                    status = "isOngoing"
+                
+                branch_statuses[branch_id] = {
+                    'status': status,
+                    'posted_count': posted_items,
+                    'total_count': total_items,
+                    'total_branch': total_branch,
+                }
             if not tripdetail_data.exists():
                     return Response({"error": "No trip details found."}, status=404)
             driver_ids = set()
@@ -1188,32 +1212,40 @@ class TripTicketReports(APIView):
             )
             driver_mapping = {driver.entity_id: driver.entity_name for driver in drivers}
             lastBranchRecord = TripTicketBranchLogsModel.objects.using(db_alias).filter(trip_ticket_id=trip_ticket_id).order_by('-created_date').first()
-            branch_name = None
             if lastBranchRecord:
                 branch = TripBranchModel.objects.using(db_alias).filter(branch_id=lastBranchRecord.branch_id).first()
-                branch_name = branch.branch_name if branch else None
-                
+                last_branch_name = branch.branch_name if branch else None
+            
             tripdetail_serializer = TripDetailsSerializer(tripdetail_data, many=True)
             tripData = []
             for detail in tripdetail_serializer.data:
+                branch_id = detail['branch_id']
+                branch_status = branch_statuses.get(branch_id, {})
                 trip_detail = detail.copy()
                 trip_detail.update({
                     'entity_name': driver_mapping.get(trip_ticket.entity_id, ''),
                     'asst_entity_name': driver_mapping.get(trip_ticket.asst_entity_id, ''),
                     'dispatcher': driver_mapping.get(trip_ticket.dispatched_by, ''),
                     'plate_no': trip_ticket.plate_no,
-                    'last_branch': branch_name,
+                    'last_branch': last_branch_name if lastBranchRecord else None,
                     'last_branch_time' : lastBranchRecord.updated_date if lastBranchRecord else None,
                     'encoded_date': trip_ticket.updated_date,
-                    'lat': lastBranchRecord.latitude_in,
-                    'long': lastBranchRecord.longitude_in,
+                    'lat': lastBranchRecord.latitude_in if lastBranchRecord else None,
+                    'latout': lastBranchRecord.latitude_out if lastBranchRecord else None,
+                    'long': lastBranchRecord.longitude_in if lastBranchRecord else None,
+                    'longout': lastBranchRecord.longitude_out if lastBranchRecord else None,
+                    'branch_status': branch_status.get('status', 'unknown'),
+                    'posted_count': branch_status.get('posted_count', 0),
+                    'total_count': branch_status.get('total_count', 0),
+                    'total_branch': branch_status.get('total_branch', 0),
+                    'trip_ticket_no': trip_ticket.trip_ticket_no,
 
                 })
                 tripData.append(trip_detail)
             if not tripdetail_data.exists():
                 return Response({"error": "Trip ticket not found."}, status=404)
-        except ValueError:
-            return Response({"error": "Invalid ID Format."}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response ({'tripdetails': tripData})
     
@@ -1251,9 +1283,9 @@ class BranchReportsView(APIView):
         response_data = [ 
             { 
             'branch_id': branch['branch_id'], 
-            'branch_name': branch['branch_name'] 
+            'branch_name': branch['branch_name']
             } 
-            for branch in branch_serializer.data 
+            for branch in branch_serializer.data
         ]
         return Response(response_data)
 
@@ -1263,15 +1295,13 @@ class TripTicketDetailReports(APIView):
     def get(self, request):
         db_alias = get_db_alias(request)
         
-        trip_ticket_no = request.query_params.get('trip_ticket_no')
+        trip_ticket_id = request.query_params.get('trip_ticket_id')
         branch_id = request.query_params.get('branch_id')
         
-        if not trip_ticket_no:
+        if not trip_ticket_id:
             return Response({"error": "Trip Ticket No. is required."}, status=400)
         try:
-            trip_ticket =TripTicketModel.objects.using(db_alias).filter(
-            trip_ticket_no = trip_ticket_no).first()
-            tripdetail_data = TripDetailsModel.objects.using(db_alias).filter(trip_ticket_id=trip_ticket.trip_ticket_id, branch_id=branch_id)
+            tripdetail_data = TripDetailsModel.objects.using(db_alias).filter(trip_ticket_id=trip_ticket_id, branch_id=branch_id)
             
             if not tripdetail_data.exists():
                 return Response({"error": "Trip ticket not found."}, status=404)
@@ -1341,7 +1371,10 @@ class InitialReports(APIView):
                     'last_branch_time': latest_log.updated_date if latest_log else None,
                     'encoded_date': initial_trip.updated_date,
                     'lat': latest_log.latitude_in,
-                    'long': latest_log.longitude_in
+                    'long': latest_log.longitude_in,
+                    'last_branch_id': latest_log.branch_id,
+                    'last_time_in': latest_log.time_in,
+                    'last_time_out': latest_log.time_out,
                 })
                 tripData.append(trip_ticket)
         except ValueError:

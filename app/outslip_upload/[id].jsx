@@ -92,7 +92,7 @@ export default function OutslipUpload() {
     });
 
     const bottomSheetRef = useRef(null);
-    const snapPoints = ['35%', '100%'];
+    const snapPoints = ['100%'];
     const [selectedReceiver, setSelectedReceiver] = useState('');
     const [receiverID, setReceiverID] = useState(0);
 
@@ -189,7 +189,8 @@ export default function OutslipUpload() {
                 params: {
                     page: pageNum,
                     page_size: pageSize,
-                    search: debouncedSearchQuery
+                    search: debouncedSearchQuery,
+                    branch_id: outslipDetail.branch_id,
                 }
             });
             setReceiverData(prev =>
@@ -408,9 +409,11 @@ export default function OutslipUpload() {
             setIsLoading(false);
             return;
         }
-        if (!receiver) {
-            Alert.alert('Error', 'Receiver is required. Please input who received the outslip');
-        }
+        /* if (!receiver) {
+            Alert.alert('Error', 'Receiver is required. Please input who received the outslip');\
+            setIsLoading(false);
+            return;
+        } */
         /*  Object.entries(serialQuantities).forEach(([serbat_id, qty]) => {
              formData.append(`serials[${serbat_id}]`, qty);
          }); */
@@ -527,6 +530,7 @@ export default function OutslipUpload() {
                 formData.append('username', username);
                 formData.append('upload_text', ocrResults[index] || '');
                 formData.append('upload_remarks', remarks[index] || '');
+                formData.append('received_by', selectedReceiver || '');
 
                 return api.post('/outslipupload/', formData, {
                     headers: {
@@ -1031,11 +1035,15 @@ export default function OutslipUpload() {
                                             style={styles.receiverSelector}
                                         >
                                             <Text style={styles.receiverSelectorText}>
-                                                {selectedReceiver || 'Select Receiver'}
+                                                {'Select Receiver'}
                                             </Text>
                                             <Ionicons name="chevron-down" size={20} color="gray" />
                                         </TouchableOpacity>
-
+                                        <TextInput
+                                            style={styles.receiverSelector}
+                                            value={selectedReceiver}
+                                            onChangeText={setSelectedReceiver}
+                                            placeholder='Others (please specify)' />
                                     </View>
 
                                     <TouchableOpacity style={styles.button2} onPress={() => setModalVisible(true)}>
