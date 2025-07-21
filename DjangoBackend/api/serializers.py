@@ -120,3 +120,13 @@ class AuthorizedReceiverSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuthorizedReceiverModel
         fields = '__all__'
+        
+class BranchOtherDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BranchOtherDetailsModel
+        fields = '__all__'
+    
+class DeliverySequenceViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeliverySequenceViewModel
+        fields = '__all__'

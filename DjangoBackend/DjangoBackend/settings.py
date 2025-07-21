@@ -143,10 +143,10 @@ DATABASES = {
  
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'bootstrap2_ret',
+        'NAME': 'bootstrap2_ret_training_052025',
         'USER': 'sa',
         'PASSWORD':'WTP9@!979#100420!9',
-        'HOST':'192.168.0.32',
+        'HOST':'192.168.0.33\MSSQLTESTSERVER',
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
             'extra_params': 'Encrypt=no;TrustServerCertificate=yes',

@@ -339,3 +339,32 @@ class AuthorizedReceiverModel(models.Model):
     class Meta:
         db_table = 'fin_mf_branch_receiver'
         managed = False    
+        
+        
+###DMSR
+class BranchOtherDetailsModel(models.Model):
+    branch_id = models.BigIntegerField(primary_key=True)
+    branch_name = models.CharField(max_length=255)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    
+    class Meta:
+        db_table ="fin_mf_branch_other_details"
+        managed = False
+    
+class DeliverySequenceViewModel(models.Model):
+    trip_ticket_id = models.BigIntegerField(primary_key=True)
+    trip_ticket_no = models.BigIntegerField()
+    trip_ticket_del_to_id = models.BigIntegerField()
+    delivery_to_name = models.CharField(max_length=255)
+    branch_id = models.BigIntegerField()
+    entity_id = models.BigIntegerField()
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    seq = models.BigIntegerField()
+    del_status = models.CharField(max_length=255)
+    
+    class Meta:
+        db_table="vw_scm_tr_trip_ticket_detail_delivery_sequence"
+        managed = False
+    

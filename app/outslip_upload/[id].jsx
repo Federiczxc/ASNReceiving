@@ -423,6 +423,12 @@ export default function OutslipUpload() {
         const userId = userData ? JSON.parse(userData).user_id : null;
         const userObject = userData ? JSON.parse(userData) : null;
         const username = userObject?.username;
+        const location = await getCurrentLocation();
+        if (!location) {
+            Alert.alert('Error', 'Failed to get location')
+            return;
+        }
+        const { latitude, longitude } = location;
         //console.log("tite", quantity);
 
         //console.log('acotot', userId, outslipDetail.trip_ticket_id, outslipDetail.branch_id,);
@@ -445,12 +451,7 @@ export default function OutslipUpload() {
             //console.log('dad', hasClockedIn);
 
             if (!hasClockedIn) {
-                const location = await getCurrentLocation();
-                if (!location) {
-                    Alert.alert('Error', 'Failed to get location')
-                    return;
-                }
-                const { latitude, longitude } = location;
+
                 const clockInData = {
                     latitude_in: latitude,
                     longitude_in: longitude,
@@ -519,6 +520,8 @@ export default function OutslipUpload() {
                     type: mimeType,
                     name: `photo_${index}.${imageType}`,
                 });
+                formData.append('latitude', latitude);
+                formData.append('longitude', longitude);
                 formData.append('trip_ticket_detail_id', trip_ticket_detail_id.toString());
                 formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
                 formData.append('created_date', new Date().toISOString().slice(0, 19).replace('T', ' '));

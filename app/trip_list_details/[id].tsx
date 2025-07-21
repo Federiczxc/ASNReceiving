@@ -401,7 +401,7 @@ export default function TripListDetails() {
                     value={searchQuery}
                     onChangeText={(text) => {
                         setSearchQuery(text);
-                        setCurrentPage(1); // Reset to first page on new search
+                        setCurrentPage(1);
                     }}
                 />
                 <View style={styles.clockContainer}>
@@ -484,7 +484,7 @@ export default function TripListDetails() {
                             <View style={[styles.ticketHeader, { backgroundColor: item.is_posted === true ? '#25292e' : '#4caf50' }
                             ]}>
                                 <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_no}</Text>
-                                <Text style={styles.footerText}>Encoded Date: {format(new Date(item.created_date), 'MMM dd, yyyy hh:mm a')}</Text>
+                                <Text style={styles.footerText}>Encoded Date: {format(new Date(item.updated_date), 'MMM dd, yyyy hh:mm a')}</Text>
                             </View>
                             {item.items && item.items.length > 0 && (
                                 <View style={styles.ticketBody}>
