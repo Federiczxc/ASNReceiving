@@ -25,7 +25,7 @@ export default function TripBranch() {
     const fetchData = async () => {
         try {
             const response = await api.get('/tripbranch/', {
-                params: { id, trip }
+                params: { id }
             });
             setTripBranch(response.data);
             setLoading(false);
@@ -97,8 +97,8 @@ export default function TripBranch() {
                             router.push({
                                 pathname: '/trip_list_details/[id]',
                                 params: {
-                                    id: item.branch_id,
                                     trip_ticket_id: id,
+                                    id: item.branch_id, 
                                 },
                             })
                         }

@@ -44,6 +44,7 @@ BASE_URL = "http://176.16.5.166:8000/api"
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -125,7 +126,7 @@ TEMPLATES = [
         },
     },
 ]
-
+ASGI_APPLICATION = 'DjangoBackend.asgi.application'
 WSGI_APPLICATION = 'DjangoBackend.wsgi.application'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024 * 1024
 GEOIP_PATH = os.path.join(BASE_DIR, 'outslips')
