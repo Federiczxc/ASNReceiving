@@ -6,6 +6,11 @@ import api from '../../api';
 interface TripBranch {
     branch_id: number;
     branch_name: string;
+    full_address: string;
+    contact_person: string;
+    contact_no: number;
+    sequence: number;
+    trip_ticket_del_to_id: number;
 }
 
 interface TripTicket {
@@ -98,14 +103,14 @@ export default function TripBranch() {
                                 pathname: '/trip_list_details/[id]',
                                 params: {
                                     trip_ticket_id: id,
-                                    id: item.branch_id, 
+                                    id: item.trip_ticket_del_to_id,
                                 },
                             })
                         }
                     >
                         <View style={styles.ticketContainer}>
                             <View style={styles.ticketHeader}>
-                                <Text style={styles.tripId}> Branch #{item.branch_id}</Text>
+                                <Text style={styles.tripId}> Branch #{item.trip_ticket_del_to_id}</Text>
                             </View>
                             <View style={styles.ticketBody}>
 

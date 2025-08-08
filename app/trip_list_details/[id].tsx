@@ -9,15 +9,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform } from 'react-native';
 import * as Location from 'expo-location'
-interface Item {
-    item_id: number;
-    outslip_to_id: number;
-    item_qty: number;
-    item_description: string;
-    barcode: string;
-    remarks: string;
-    uom_code: string;
-}
+import BottomSheet, { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
+
 interface TripDetails {
     trip_ticket_id: number;
     trip_ticket_detail_id: number;
@@ -36,20 +29,14 @@ interface TripDetails {
     item_qty: number;
     is_posted: boolean;
     detail_volume: number;
-    items: Item[];
 }
-interface BranchDetails {
-    branch_id: number;
-    branch_name: string;
-}
+
 export default function TripListDetails() {
     LogBox.ignoreAllLogs()
     const [TripDetails, setTripDetails] = useState<TripDetails[]>([]);
-    const [BranchDetails, setBranchDetails] = useState<BranchDetails | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
-    const [isExpanded, setIsExpanded] = useState<Record<number, boolean>>({});
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [itemsPerPage] = useState<number>(10); // Number of items per page
+    const [itemsPerPage] = useState<number>(10);
     const [hasClockIn, setHasClockIn] = useState<boolean>(false);
     const [hasClockOut, setHasClockOut] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -94,15 +81,26 @@ export default function TripListDetails() {
         }
     };
 
-    // Convert to number if needed
-    const branch_id = id ? parseInt(id as string, 10) : null;
-    const tripId = trip_ticket_id ? parseInt(trip_ticket_id as string, 10) : null;
-
 
     useEffect(() => {
         const backAction = () => {
             if (loading) {
                 Alert.alert('', 'Are you sure you want to go back the previous page? All unsaved changes will be lost', [
+                    {
+                        text: 'Cancel',
+                        onPress: () => null,
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Yes',
+                        onPress: () => router.back(),
+
+                    }
+                ])
+                return true;
+            };
+            if (hasClockIn && !hasClockOut) {
+                Alert.alert('', 'You still haven\'t timed out yet for this branch. Do you want to proceed?', [
                     {
                         text: 'Cancel',
                         onPress: () => null,
@@ -129,15 +127,14 @@ export default function TripListDetails() {
         try {
             const accessToken = await AsyncStorage.getItem('access_token');
             const response = await api.get('/tripdetails/', {
-                params: { trip_ticket_id, branch_id }
+                params: { trip_ticket_id, id }
             });
-            setTripDetails(response.data.tripdetails);
-            console.log("tite", response.data.tripdetails);
-            setBranchDetails(response.data.branches[0]);
+            setTripDetails(response.data);
+            console.log("tite", response.data);
             const timeInCheck = await api.get('/check-clock-in/', {
                 params: {
                     trip_ticket_id: trip_ticket_id,
-                    branch_id: branch_id,
+                    trip_ticket_del_to_id: id,
                 },
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -159,7 +156,7 @@ export default function TripListDetails() {
         useCallback(() => {
 
             fetchData();
-        }, [trip_ticket_id, branch_id])
+        }, [trip_ticket_id, id])
     );
     const filteredTrips = TripDetails.filter((trip) =>
         trip.ref_trans_no.toString().includes(searchQuery));
@@ -195,18 +192,13 @@ export default function TripListDetails() {
             const { latitude, longitude } = location;
             console.log("TUITEUTEITIE", location, latitude, longitude);
             const accessToken = await AsyncStorage.getItem('access_token');
-            // Get additional location data (e.g., address) using LocationIQ or another service
-            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
-            /*    console.log("titest2 ", currentDate);
-               console.log("titesmet2 ", currentTime);
-               console.log("tripticketinin", trip_ticket_id, id); */
+
             const clockInData = {
                 latitude_in: latitude,
                 longitude_in: longitude,
                 created_by: userId,
                 trip_ticket_id: trip_ticket_id,
-                branch_id: id,
+                trip_ticket_del_to_id: id,
             };
             reqStart = Date.now();
             const postResponse = await api.post("/clock-in/", clockInData, {
@@ -251,7 +243,7 @@ export default function TripListDetails() {
             const clockInData = {
                 created_by: userId,
                 trip_ticket_id: trip_ticket_id,
-                branch_id: id,
+                trip_ticket_del_to_id: id,
             };
             console.log("clokindata", clockInData);
             const postResponse = await api.post("/undo-clock-in/", clockInData, {
@@ -294,18 +286,12 @@ export default function TripListDetails() {
             }
             const { latitude, longitude } = location;
             console.log("Location Retrieved", location);
-            // Get additional location data (e.g., address) using LocationIQ or another service
-            /* const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' '); */
-            /* console.log("titest2 ", currentDate);
-            console.log("titesmet2 ", currentTime);
-            console.log("tripticketinin", trip_ticket_id, id);
-            console.log("locloc", latitude, longitude, currentDate); */
+
             const clockOutData = {
                 latitude_out: latitude,
                 longitude_out: longitude,
                 trip_ticket_id: trip_ticket_id,
-                branch_id: id
+                trip_ticket_del_to_id: id
             }
             reqStart = Date.now();
             const postResponse = await api.post("/clock-out/", clockOutData, {
@@ -340,48 +326,7 @@ export default function TripListDetails() {
         }
     };
 
-    /* const timeOut = async () => {
-        try {
-            const accessToken = await AsyncStorage.getItem('access_token');
-            const userData = await AsyncStorage.getItem('user_data');
-            const userId = userData ? JSON.parse(userData).user_id : null;
-            const response = await api.get("/retrieve-location/");
-            const locationData = response.data;
-            const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const currentTime = new Date().toISOString().slice(11, 19).replace('T', ' ');
-            console.log("titest2 ", currentDate);
-            console.log("titesmet2 ", currentTime);
-            console.log("tripticketinin", trip_ticket_id, id);
-            const userIp = locationData.ip;
-            const latitude = locationData.latitude;
-            const longitude = locationData.longitude;
-            const fulladdress = locationData.fulladdress;
-            console.log("locloc", userIp, latitude, longitude, fulladdress, currentDate);
-            const clockInData = {
-                ip_address_out: userIp,
-                location_out: fulladdress,
-                latitude_out: latitude,
-                longitude_out: longitude,
-                trip_ticket_id: trip_ticket_id,
-                branch_id: id
-            }
-            const postResponse = await api.post("/clock-out/", clockInData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            console.log("clockindata", postResponse.data)
-            Alert.alert("CLOCKEDOUT", "YOUCLOCKED");
-        } catch (error: any) {
-            if (error.response && error.response.data.error === "You have already clocked out today.") {
-                Alert.alert("Error", "You have already clocked out today.");
-            } else {
-                console.error("Error fetching location or clocking out:", error.response.data);
-                Alert.alert("Error", JSON.stringify(error.response.data));
-            }
-        }
-    }; */
+
     if (loading) {
         return (
             <View style={styles.container}>
@@ -393,10 +338,10 @@ export default function TripListDetails() {
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
-                <Text style={styles.title}>{BranchDetails?.branch_name} Outslips</Text>
+                <Text style={styles.title}>{TripDetails[0].branch_name} Outslips</Text>
                 <TextInput
                     style={styles.searchBar}
-                    placeholder="Search by Outslip #"
+                    placeholder="Search by Document #"
                     keyboardType="numeric"
                     value={searchQuery}
                     onChangeText={(text) => {
@@ -484,9 +429,10 @@ export default function TripListDetails() {
                             <View style={[styles.ticketHeader, { backgroundColor: item.is_posted === true ? '#25292e' : '#4caf50' }
                             ]}>
                                 <Text style={styles.tripId}>{item.trans_name} #{item.ref_trans_no}</Text>
+                                <Text style={styles.tripId}>Trip Ticket Detail #{item.trip_ticket_detail_id}</Text>
                                 <Text style={styles.footerText}>Encoded Date: {format(new Date(item.updated_date), 'MMM dd, yyyy hh:mm a')}</Text>
                             </View>
-                            {item.items && item.items.length > 0 && (
+                            {item && (
                                 <View style={styles.ticketBody}>
                                     <View style={styles.infoSection}>
                                         <Text style={styles.label}>Detail Volume:</Text>

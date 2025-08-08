@@ -71,9 +71,9 @@ class OutslipItemQtySerializer(serializers.ModelSerializer):
         model = OutslipItemQtyModel
         fields = '__all__'
 
-class CustomerMFSerializer(serializers.ModelSerializer):
+class AuthorizedReceiverSerializer(serializers.ModelSerializer):
     class Meta:
-        model= TripCustomerModel    
+        model= AuthorizedReceiverModel 
         fields = '__all__'
 class ItemMFSerializer(serializers.ModelSerializer):
     class Meta:
@@ -134,4 +134,9 @@ class DeliverySequenceViewSerializer(serializers.ModelSerializer):
 class TripDetailsViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripDetailsViewModel
+        fields = '__all__'
+
+class DMSTripListViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DMSTripListViewModel
         fields = '__all__'

@@ -67,6 +67,8 @@ export default function OutslipUpload() {
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
 
     const [isEditMode, setEditMode] = useState(false);
+    const [delID, setDelID] = useState();
+
     const toggleItemExpansion = (itemId) => {
         setIsExpandedItems(prev => (Object.assign(Object.assign({}, prev), { [itemId]: !prev[itemId] })));
     };
@@ -149,6 +151,7 @@ export default function OutslipUpload() {
                 setTripBranch(response.data.branches[0]);
                 setExistingImages(uploadData.map(item => item.upload_files));
                 setRemarks(uploadData.map(item => item.upload_remarks));
+                setDelID(uploadData[0].branch_id)
                 console.log("supotot", uploadData);
                 console.log("tule", response.data.trip_details[0]);
                 console.log("ima", uploadData.map(item => item.upload_files));
@@ -359,7 +362,7 @@ export default function OutslipUpload() {
                 formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
                 formData.append('trans_name', outslipDetail.trans_name);
                 formData.append('ref_trans_no', outslipDetail.ref_trans_no);
-                formData.append('branch_id', tripBranch.branch_id);
+                formData.append('trip_ticket_del_to_id', delID);
                 formData.append('branch_name', tripBranch.branch_name);
                 formData.append('username', username);
 

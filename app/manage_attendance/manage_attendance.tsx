@@ -25,7 +25,6 @@ interface Attendance {
     latitude_out: Float;
     longitude_in: Float;
     longitude_out: Float;
-    branch_details: any;
 }
 
 export default function ManageAttendance() {
@@ -56,9 +55,10 @@ export default function ManageAttendance() {
                         },
                     }
                 );
+                console.log("tite", response.data.userlogs);
+
                 if (response.status === 200 && response.data.userlogs.length > 0) {
                     setAttendanceData(response.data.userlogs);
-                    console.log("tite", response.data.userlogs);
                     console.log("atat", JSON.stringify(response.data.userlogs, null, 2));
                 }
                 else {

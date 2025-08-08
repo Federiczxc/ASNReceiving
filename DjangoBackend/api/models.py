@@ -335,6 +335,7 @@ class AuthorizedReceiverModel(models.Model):
     branch_id = models.BigIntegerField()
     entity_id = models.BigIntegerField()
     entity_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255)
     
     class Meta:
         db_table = 'fin_mf_branch_receiver'
@@ -400,3 +401,24 @@ class TripDetailsViewModel(models.Model):
     class Meta:
         db_table = 'vw_scm_tr_trip_ticket_detail_by_del_seq'
         managed = False
+
+class DMSTripListViewModel(models.Model):
+    trip_ticket_id = models.BigIntegerField(primary_key=True)
+    trip_ticket_no = models.BigIntegerField()
+    trip_ticket_date = models.DateTimeField()
+    plate_no = models.CharField(max_length=20)
+    entity_id = models.BigIntegerField()
+    entity_name = models.CharField(max_length=255)
+    asst_entity_id = models.BigIntegerField()
+    asst_entity_name = models.CharField(max_length=255)
+    dispatched_by = models.BigIntegerField()
+    dispatched_by_name = models.CharField(max_length=255)
+    remarks = models.CharField(max_length=255)
+    entity_contact = models.CharField(max_length=255)
+    asst_entity_contact = models.CharField(max_length=255)
+    dispatched_by_contact = models.CharField(max_length=255)
+    
+    class Meta:
+        db_table = 'vw_scm_tr_trip_ticket_dms_trip_list'
+        managed = False
+

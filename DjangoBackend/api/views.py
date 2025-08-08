@@ -73,13 +73,12 @@ class TripListView(APIView):
     def get(self, request):
         db_alias = get_db_alias(request)
         
-        trips = TripTicketModel.objects.using(db_alias).all().order_by('-trip_ticket_id').values()#.filter(is_final_trip=1)
+        trips = TripTicketModel.objects.using(db_alias).all().order_by('-trip_ticket_id').values().filter(is_final_trip=1)
         drivers = TripDriverModel.objects.using(db_alias).all()
 
         driver_mapping = {driver.entity_id: driver.entity_name for driver in drivers}
         
         trip_serializer = TripTicketSerializer(trips, many=True)
-        print(f"Current DB: {connection.alias}")
         for trip in trip_serializer.data:
             trip['entity_name'] = driver_mapping.get(trip['entity_id'], '')
             trip['asst_entity_name'] = driver_mapping.get(trip['asst_entity_id'], '')
@@ -108,23 +107,41 @@ class TripBranchView(APIView):
         
             tripdetail_serializer = TripDetailsViewSerializer(tripdetail_data, many=True)
             tripdetails = tripdetail_serializer.data
+            address_mapping = {
+                detail['trip_ticket_del_to_id']: detail['full_address']
+                for detail in tripdetail_serializer.data
+            }
 
-            branch_ids = list(set([detail['branch_id'] for detail in tripdetails])) #convert to list and remove duplicates of branch id
+            contact_mapping = {
+                detail['trip_ticket_del_to_id']: detail['contact_person']
+                for detail in tripdetail_serializer.data
+            }
+            
+            number_mapping = {
+                detail['trip_ticket_del_to_id']: detail['contact_no']
+                for detail in tripdetail_serializer.data
+            }
+            branch_ids = list(set([detail['trip_ticket_del_to_id'] for detail in tripdetails])) #convert to list and remove duplicates of branch id
 
-            branch_data = TripBranchModel.objects.using(db_alias).order_by('branch_name').filter(branch_id__in=branch_ids) # match
-            branch_serializer = TripBranchSerializer(branch_data, many=True)
+            branch_data = DeliverySequenceViewModel.objects.using(db_alias).order_by('deliver_to_name').filter(trip_ticket_del_to_id__in=branch_ids) # match
+            branch_serializer = DeliverySequenceViewSerializer(branch_data, many=True)
 
 
             response_data = [ 
                 { 
                 'branch_id': branch['branch_id'], 
-                'branch_name': branch['branch_name'] 
+                'branch_name': branch['deliver_to_name'],
+                'full_address': address_mapping.get(branch['trip_ticket_del_to_id']),
+                'contact_person': contact_mapping.get(branch['trip_ticket_del_to_id']),
+                'contact_no': number_mapping.get(branch['trip_ticket_del_to_id']),
+                'sequence': branch['seq'],
+                'trip_ticket_del_to_id': branch['trip_ticket_del_to_id'],
                 } 
                 for branch in branch_serializer.data 
             ]
             return Response(response_data)
         except Exception as e:
-            return Response({'error':str(e)})
+            return Response({'error':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class TripDetailView(APIView):
     permission_classes = [AllowAny]
@@ -133,46 +150,19 @@ class TripDetailView(APIView):
         db_alias = get_db_alias(request)
         
         trip_ticket_id = request.query_params.get('trip_ticket_id')
-        branch_id = request.query_params.get('branch_id')
+        trip_ticket_del_to_id = request.query_params.get('id')
 
-        if not trip_ticket_id:
+        if not trip_ticket_id and not trip_ticket_del_to_id:
             return Response({"error": "trip_ticket_id is required."}, status=400)
-#, cast(null as nvarchar(30)) as remarks
         try:
-            connection = connections[db_alias]
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                      SELECT 
-                        td.*,
-                        cast(null as bigint) as item_id,   cast(null as nvarchar(30)) as item_description,   cast(null as nvarchar(30)) as barcode,   cast(null as int) as uom_id,
-                        cast(null as nvarchar(30)) as uom_code,  cast(null as int) as item_qty
-                    FROM scm_tr_trip_ticket_detail td
-                    WHERE td.trip_ticket_id = %s AND td.branch_id = %s order by td.ref_trans_no asc
-                """, [trip_ticket_id, branch_id])
-                
-                columns = [col[0] for col in cursor.description]
-                raw_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-            if not raw_data:
-                return Response({"error": "Trip ticket not found."}, status=404)
-
-            trips_map = {}
-            branches = set()
-            
-           
-            #logger.warning("tete", list(trips_map.values()))
-            # Get branch details
-            branch_data = TripBranchModel.objects.using(db_alias).filter(
-                branch_id__in=branches
-            )
-            branch_serializer = TripBranchSerializer(branch_data, many=True)
-            return Response({
-                'tripdetails': list(trips_map.values()),
-                'branches': branch_serializer.data
-            })
-
-        except ValueError:
-            return Response({"error": "Invalid ID format."}, status=400)
+            branch_details = TripDetailsViewModel.objects.using(db_alias).filter(trip_ticket_id=trip_ticket_id,
+            trip_ticket_del_to_id=trip_ticket_del_to_id)
+            branch_serializer = TripDetailsViewSerializer(branch_details, many=True)
+            logger.warning(branch_serializer.data)
+            return Response(branch_serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class ManageAttendanceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -228,7 +218,7 @@ class ManageTripDetailView(APIView):
         logger.warning(f"tite {trip_ids}")
         if db_alias == 'default':
 
-            trip_details_qs = TripDetailsModel.objects.using(db_alias).order_by('branch_name', 'ref_trans_no').filter(
+            trip_details_qs = TripDetailsModel.objects.using(db_alias).order_by('created_date', 'ref_trans_no').filter(
                 trip_ticket_id__in=trip_ids,
                 trip_ticket_detail_id__in=trip_detail_ids
             )
@@ -292,7 +282,7 @@ class EditUploadedPictures(APIView):
         base_url = connection.settings_dict.get('BASE_URL', settings.BASE_URL)
         #logger.warning(f"upload_images: {upload_images}")
         #logger.warning(f"upload_remarks: {upload_remarks}")
-        logger.warning("da", trip_ticket_del_to_id)
+        #logger.warning("da", trip_ticket_del_to_id)
         try:
             # Get clock-in data once
             has_clock_in = TripTicketBranchLogsModel.objects.using(db_alias).filter(
@@ -537,7 +527,7 @@ class ManageUploadedCancel(APIView):
                 return Response({'error':str(e)})
                 
 class OutslipDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     
     def get(self, request):
@@ -642,7 +632,6 @@ class UploadOutslipView(APIView):
         longitude = request.data.get('longitude')
         db_alias = get_db_alias(request)
         connection = connections[db_alias]
-        logger.warning("concon", branch_id)
         base_url = connection.settings_dict.get('BASE_URL', settings.BASE_URL)
         no_clock_in = TripTicketBranchLogsModel.objects.using(db_alias).filter(
             created_by=user_id,
@@ -756,7 +745,6 @@ class UploadOutslipView(APIView):
                     trip_details.received_by = received_by
                     trip_details.received_date = timezone.now()
                     if db_alias == 'tsl_db':
-                        logger.warning(f"dede {is_delivered}")
                         trip_details.is_delivered = is_delivered
                         if is_delivered == False:
                             trip_details.cancel_reason = cancel_reason
@@ -790,7 +778,7 @@ def reverse_geocode(lat, lon):
  
 class ReceiverCursorPagination(CursorPagination):
     page_size = 25
-    ordering = 'entity_name'    
+    ordering = 'full_name'    
 class ReceiverMFView (APIView): #RETAIL
     permission_classes = [AllowAny]
     pagination_class = ReceiverCursorPagination
@@ -799,14 +787,15 @@ class ReceiverMFView (APIView): #RETAIL
         db_alias = get_db_alias(request)
         try:
             branch_id = request.query_params.get('branch_id')
-            receivers = AuthorizedReceiverModel.objects.using(db_alias).all().filter(branch_id=branch_id)
+            print(branch_id)
+            receivers = AuthorizedReceiverModel.objects.using(db_alias).all().filter(branch_id = branch_id)
             search_query = request.query_params.get('search', None)
             if search_query:
-                receivers = receivers.filter(Q(entity_name__icontains=search_query))
+                receivers = receivers.filter(Q(full_name__icontains=search_query))
             paginator = self.pagination_class()
             page = paginator.paginate_queryset(receivers,request)
             
-            receivers_serializer = CustomerMFSerializer(page, many=True)
+            receivers_serializer = AuthorizedReceiverSerializer(page, many=True)
             return paginator.get_paginated_response(receivers_serializer.data)
         except Exception as e:
             return Response({'error':str(e)})
@@ -820,7 +809,7 @@ class CheckClockInView(APIView):
         current_date = timezone.now().date()
         trip_ticket_id = request.query_params.get('trip_ticket_id')
         trip_ticket_del_to_id = request.query_params.get('trip_ticket_del_to_id')
-        print(f"Checking clock-in for: user={user_id}, trip={trip_ticket_id}, trip_ticket_del_to_id={trip_ticket_del_to_id}")
+        #print(f"Checking clock-in for: user={user_id}, trip={trip_ticket_id}, trip_ticket_del_to_id={trip_ticket_del_to_id}")
         exists = TripTicketBranchLogsModel.objects.using(db_alias).filter(
             created_by=user_id,
             trip_ticket_id=trip_ticket_id,
@@ -930,8 +919,9 @@ class ClockInAttendance(APIView):
             ).exclude(branch_id=trip_ticket_del_to_id).first()
             if no_clock_out:
                 trip_ticket_no = TripTicketModel.objects.using(db_alias).filter(trip_ticket_id=no_clock_out.trip_ticket_id).values_list('trip_ticket_no', flat=True).first()
+                branch_name = DeliverySequenceViewModel.objects.using(db_alias).filter(trip_ticket_no=trip_ticket_no, trip_ticket_del_to_id=no_clock_out.branch_id).values_list('deliver_to_name', flat=True).first()
                 return Response(
-                    {"error": f"You haven't clocked out at Trip Ticket No:{trip_ticket_no} Branch ID:{no_clock_out.branch_id}"},
+                    {"error": f"You haven't clocked out at Trip Ticket No:{trip_ticket_no} in {branch_name}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             else:
@@ -1090,7 +1080,7 @@ class ClockOutAttendance(APIView):
                     branch_id=detail.trip_ticket_del_to_id
                     ).first():
                         return Response(
-                       {"error": f"Upload missing for outslip #{detail.ref_trans_no}"},
+                       {"error": f"Upload missing for transaction #{detail.ref_trans_no}"},
                         status=status.HTTP_400_BAD_REQUEST
                     )
             else:
@@ -1380,7 +1370,7 @@ class TripTicketDetailReports(APIView):
 
         return Response(tripdetails)
 
-class AttendanceReports(APIView):
+class AttendanceReports(APIView): #RETAILLLLLLLLLLL
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1389,7 +1379,27 @@ class AttendanceReports(APIView):
         trip_ticket_id = request.query_params.get('trip_ticket_id')
         trip_ticket_del_to_id = request.query_params.get('trip_ticket_del_to_id')
         try:
+            branch_id_data = DeliverySequenceViewModel.objects.using(db_alias).filter(
+    trip_ticket_del_to_id=trip_ticket_del_to_id).values('branch_id').first()
+            branch_id = branch_id_data['branch_id']
+            print(branch_id)
+            user_logs = TripTicketBranchLogsModel.objects.using(db_alias).order_by('-log_id').filter(trip_ticket_id=trip_ticket_id, branch_id = branch_id)
+        except ValueError:
+            return Response({"error": "Invalid ID format."}, status=400)
+        userlogs_serializer = BranchLogsSerializer(user_logs, many=True)
 
+        return Response(userlogs_serializer.data)
+
+class InitialAttendance(APIView): #RETAILLLLLLLLLLL
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        db_alias = get_db_alias(request)
+              
+        trip_ticket_id = request.query_params.get('trip_ticket_id')
+        trip_ticket_del_to_id = request.query_params.get('trip_ticket_del_to_id')
+        try:
+        
             user_logs = TripTicketBranchLogsModel.objects.using(db_alias).order_by('-log_id').filter(trip_ticket_id=trip_ticket_id, branch_id = trip_ticket_del_to_id)
         except ValueError:
             return Response({"error": "Invalid ID format."}, status=400)
@@ -1572,6 +1582,17 @@ class ViewOutslipReport(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 #####################TSL DMS############################
 
+class DMSTripListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        db_alias= get_db_alias(request)
+        
+        trip_data = DMSTripListViewModel.objects.using(db_alias).all().order_by('-trip_ticket_id').values()
+
+        trip_serializer = DMSTripListViewSerializer(trip_data, many=True)
+
+        return Response({'triplist': trip_serializer.data})
 class TripCustomerView(APIView): #TSL ONLY tripcustomer/
     permission_classes = [AllowAny]
    
@@ -1582,7 +1603,8 @@ class TripCustomerView(APIView): #TSL ONLY tripcustomer/
             return Response({"error": "ID and No. is required."}, status=400)
         
         try:
-           
+
+
             tripdetail_data = TripDetailsViewModel.objects.using(db_alias).filter(trip_ticket_id=trip_ticket_id)
             if not tripdetail_data.exists():
                 return Response({"error": "Trip ticket not found."}, status=404)
@@ -1642,7 +1664,7 @@ class CustomerDetailView(APIView): #customerdetails/
             trip_ticket_del_to_id=trip_ticket_del_to_id)
             customer_serializer = TripDetailsViewSerializer(customer_details, many=True)
   
-            logger.warning(customer_serializer.data)
+            #logger.warning(customer_serializer.data)
             return Response(customer_serializer.data)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -1696,11 +1718,11 @@ class ReclockInAttendance(APIView):
 
             if no_clock_out:
                 trip_ticket_no = TripTicketModel.objects.using(db_alias).filter(trip_ticket_id=no_clock_out.trip_ticket_id).values_list('trip_ticket_no', flat=True).first()
+                branch_name = DeliverySequenceViewModel.objects.using(db_alias).filter(trip_ticket_no=trip_ticket_no, trip_ticket_del_to_id=no_clock_out.branch_id).values_list('deliver_to_name', flat=True).first()
                 return Response(
-                    {"error": f"You haven't clocked out at Trip Ticket No:{trip_ticket_no} Branch ID:{no_clock_out.branch_id}"},
+                    {"error": f"You haven't clocked out at Trip Ticket No:{trip_ticket_no} in {branch_name}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-           
            
             location_data = reverse_geocode(data['latitude_in'], data['longitude_in'])
             location_in = location_data['results'][1].get('formatted_address')
@@ -1830,6 +1852,90 @@ class CancelOutslipView(APIView):
             return Response ({"message": "insucc"}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class BulkDetailView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get (self,request):
+        db_alias = get_db_alias(request)
+        trip_ticket_detail_ids = request.query_params.get('trip_ticket_detail_ids')
+        s = str(trip_ticket_detail_ids).replace('[','').replace(']','')
+        clean_ids = trip_ticket_detail_ids.strip('[]').split(',')
+        ids_list = [int(id.strip()) for id in clean_ids]
+        try:
+            bulkdetail_data = TripDetailsViewModel.objects.using(db_alias).filter(trip_ticket_detail_id__in=ids_list)
+            bulkdetail_serializer = TripDetailsViewSerializer(bulkdetail_data, many=True)
+            return Response ({"bulkdetails": bulkdetail_serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error':str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class BulkUploadView(APIView):
+    permission_classes = [AllowAny]
+
+    def post (self, request):
+        db_alias = get_db_alias(request)
+            
+        trip_detail_ids = request.data.get('trip_detail_ids')
+        userID = request.data.get('created_by')
+        received_by = request.data.get('received_by')
+        upload_images = request.FILES.getlist('image', ) 
+        upload_remarks = request.data.getlist('upload_remarks', '')
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+        trip_ticket_id = request.data.get('trip_ticket_id')
+        trip_ticket_del_to_id = request.data.get('trip_ticket_del_to_id')
+
+        file_urls = []
+        file_remarks = []
+        connection = connections[db_alias]
+        base_url = connection.settings_dict.get('BASE_URL', settings.BASE_URL)
+        no_clock_in = TripTicketBranchLogsModel.objects.using(db_alias).filter(
+            created_by=userID,
+            time_in__isnull=False,
+            branch_id=trip_ticket_del_to_id,
+            trip_ticket_id=trip_ticket_id,
+        ).first()
+        if not no_clock_in:
+            return Response(
+                {"error": f"You haven't clocked in for this branch"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+        
+            for i, upload_image in enumerate(upload_images): #pambukod if wala, magiging json yung data sa db
+                remark = upload_remarks[i] if i < len(upload_remarks) else None
+                data = request.data.copy()
+                data['upload_remarks'] = remark
+                with Image.open(upload_image) as img:
+                    location_data = reverse_geocode(latitude, longitude)
+                    location_in = location_data['results'][1].get('formatted_address')
+                    watermarkedtext = f"Received by: {received_by}\nTrip Ticket Detail: {trip_detail_ids}\nTaken by: {userID}  \nDate Taken: {timezone.now()}\nAddress: {location_in}\nRemarks: {upload_remarks}"
+
+                    draw = ImageDraw.Draw(img)
+                    font = ImageFont.load_default(size=64)
+                    text_position = (20,20)
+                    draw.multiline_text(text_position, watermarkedtext, fill="white", font=font)
+                    img_io = BytesIO()
+                    img.save(img_io, format='JPEG', quality=95)
+                    img_io.seek(0)
+                    if db_alias == 'tsl_db':
+                        file_path = f'tsloutslips/{upload_image.name}'
+                        
+                    else:
+                        file_path = f'outslips/{upload_image.name}'
+                    file_remarks.append(remark)
+                    saved_path = default_storage.save(file_path, ContentFile(img_io.read()))
+                    #base_url = settings.BASE_URL
+                    file_url = f"{base_url}{settings.MEDIA_URL}{saved_path}" #local
+                    file_urls.append(file_url)
+                    #file_url = f"http:{settings.MEDIA_ROOT}/{saved_path}" #1.200
+                
+                concatenated_urls = ";".join(file_urls)
+                concatenated_remarks = ";".join(file_remarks)
+                
+            with connection.cursor() as serial_cursor:
+                serial_cursor.execute("EXEC sp_dms_upload_multiple @trip_detail_id=%s, @upload_file=%s, @user_id=%s, @received_by=%s, @upload_remarks=%s", [trip_detail_ids, concatenated_urls, userID, received_by, concatenated_remarks])
+            return Response ({"message": "insucc"}, status=status.HTTP_200_OK)
+        except Exception as e:
+                return Response({'error':str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 

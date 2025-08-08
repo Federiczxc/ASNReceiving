@@ -87,21 +87,15 @@ export default function OutslipUpload() {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(''); //
     const [receiverData, setReceiverData] = useState({
-        entity_id: null,
-        entity_name: '',
+        branch_receiver_id: null,
+        branch_id: null,
+        full_name: '',
     });
 
     const bottomSheetRef = useRef(null);
     const snapPoints = ['100%'];
     const [selectedReceiver, setSelectedReceiver] = useState('');
     const [receiverID, setReceiverID] = useState(0);
-
-    const openReceiverSheet = async () => {
-        if (receiverData.length === 0) {
-            await fetchReceiver(1);
-        }
-        bottomSheetRef.current?.expand();
-    }
 
     const handleReceiverSelect = (id, receiver) => {
         console.log("rerecsec", id, receiver);
@@ -217,6 +211,12 @@ export default function OutslipUpload() {
             }
         }
     }, [searchQuery]);
+    const openReceiverSheet = async () => {
+        //if (receiverData.length === 0) {
+        await fetchReceiver(1);
+        // }
+        bottomSheetRef.current?.expand();
+    }
     useFocusEffect(
         useCallback(() => {
             navigation.setOptions({
@@ -409,11 +409,11 @@ export default function OutslipUpload() {
             setIsLoading(false);
             return;
         }
-        /* if (!receiver) {
-            Alert.alert('Error', 'Receiver is required. Please input who received the outslip');\
+        if (!selectedReceiver) {
+            Alert.alert('Error', 'Receiver is required. Please input who received the outslip');
             setIsLoading(false);
             return;
-        } */
+        }
         /*  Object.entries(serialQuantities).forEach(([serbat_id, qty]) => {
              formData.append(`serials[${serbat_id}]`, qty);
          }); */
@@ -438,7 +438,7 @@ export default function OutslipUpload() {
             const timeInCheck = await api.get('/check-clock-in/', {
                 params: {
                     trip_ticket_id: outslipDetail.trip_ticket_id,
-                    branch_id: outslipDetail.branch_id,
+                    trip_ticket_del_to_id: outslipDetail.trip_ticket_del_to_id,
                 },
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -457,7 +457,7 @@ export default function OutslipUpload() {
                     longitude_in: longitude,
                     created_by: userId,
                     trip_ticket_id: outslipDetail.trip_ticket_id,
-                    branch_id: outslipDetail.branch_id,
+                    trip_ticket_del_to_id: outslipDetail.trip_ticket_del_to_id,
                 };
 
                 const clockInResponse = await api.post("/clock-in/", clockInData, {
@@ -526,8 +526,8 @@ export default function OutslipUpload() {
                 formData.append('trip_ticket_id', outslipDetail.trip_ticket_id.toString());
                 formData.append('created_date', new Date().toISOString().slice(0, 19).replace('T', ' '));
                 formData.append('created_by', userId);
-                formData.append('branch_id', tripBranch.branch_id);
-                formData.append('branch_name', tripBranch.branch_name);
+                formData.append('branch_id', outslipDetail.trip_ticket_del_to_id);
+                formData.append('branch_name', outslipDetail.branch_name);
                 formData.append('ref_trans_no', outslipDetail.ref_trans_no);
                 formData.append('trans_name', outslipDetail.trans_name);
                 formData.append('username', username);
@@ -1074,14 +1074,14 @@ export default function OutslipUpload() {
                         onChangeText={setSearchQuery} />
                     <BottomSheetFlatList
                         data={receiverData}
-                        keyExtractor={(item) => item.entity_id.toString()}
+                        keyExtractor={(item) => item.branch_receiver_id.toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 style={styles.receiverItem}
-                                onPress={() => handleReceiverSelect(item.entity_id, item.entity_name)}
+                                onPress={() => handleReceiverSelect(item.branch_receiver_id, item.full_name)}
                             >
-                                <Text style={styles.receiverText}>{item.entity_name}</Text>
-                                {selectedReceiver === item.entity_name && (
+                                <Text style={styles.receiverText}>{item.full_name}</Text>
+                                {selectedReceiver === item.full_name && (
                                     <Ionicons name="checkmark" size={20} color="green" />
                                 )}
                             </TouchableOpacity>
