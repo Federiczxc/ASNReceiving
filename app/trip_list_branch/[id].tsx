@@ -47,7 +47,7 @@ export default function TripBranch() {
         fetchData();
     }, []);
     const filteredTrips = tripBranch.filter((trip) => {
-        const lowerBranch = trip.branch_name.toString().toLowerCase() || '';
+        const lowerBranch = trip.branch_name?.toString().toLowerCase() || '';
         const query = searchQuery.toLowerCase();
         return lowerBranch.includes(query);
     });

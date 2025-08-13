@@ -31,10 +31,7 @@ export default function OutslipUpload() {
         ref_trans_no: null,
         items: []
     });
-    const [tripBranch, setTripBranch] = useState({
-        branch_name: '',
-        branch_id: '',
-    });
+    
     const [uploadOutslip, setUploadOutslip] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [ocrText, setOcrText] = useState('');
@@ -148,7 +145,6 @@ export default function OutslipUpload() {
                 const uploadData = response.data.upload_data;
                 setUploadOutslip(uploadData);
                 setOutslipDetail(response.data.trip_details[0]);
-                setTripBranch(response.data.branches[0]);
                 setExistingImages(uploadData.map(item => item.upload_files));
                 setRemarks(uploadData.map(item => item.upload_remarks));
                 setDelID(uploadData[0].branch_id)
@@ -363,7 +359,7 @@ export default function OutslipUpload() {
                 formData.append('trans_name', outslipDetail.trans_name);
                 formData.append('ref_trans_no', outslipDetail.ref_trans_no);
                 formData.append('trip_ticket_del_to_id', delID);
-                formData.append('branch_name', tripBranch.branch_name);
+                formData.append('branch_name', outslipDetail.branch_name); //outslip 8-11
                 formData.append('username', username);
 
                 console.log("paso", formData);
@@ -520,7 +516,7 @@ export default function OutslipUpload() {
                                         <View style={styles.ticketHeader}>
                                             <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_no}</Text>
                                             <Text style={styles.tripId2}> Trip Ticket Detail ID #{outslipDetail.trip_ticket_detail_id}</Text>
-                                            <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
+                                            <Text style={styles.tripId3}>Branch Name: {outslipDetail.branch_name}</Text>
                                         </View>
                                         <Ionicons
                                             name={isExpanded ? "chevron-down" : "chevron-forward"}

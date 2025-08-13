@@ -1159,14 +1159,13 @@ class AttendanceListReport(APIView):
             
             drivers = User.objects.using(db_alias).all()
             driver_mapping = {driver.user_id: driver.user_name for driver in drivers}
-            user_logs_serializer = BranchLogsSerializer(user_logs, many=True)
                
-            ticket_number_map = {
-            ticket.trip_ticket_id:ticket.trip_ticket_no
-            for ticket in trip_tickets
-            }
-            branches = TripBranchModel.objects.using(db_alias).all()
-            branch_mapping = {branch.branch_id : branch.branch_name for branch in branches}
+
+            branch_ids = user_logs.values_list('branch_id', flat=True).distinct()
+            branches = DeliverySequenceViewModel.objects.using(db_alias).filter(trip_ticket_del_to_id__in=branch_ids)
+            branch_mapping = {branch.trip_ticket_del_to_id: branch.deliver_to_name for branch in branches}
+            ticket_number_map = {ticket.trip_ticket_id:ticket.trip_ticket_no for ticket in trip_tickets}
+            user_logs_serializer = BranchLogsSerializer(user_logs, many=True)
             
             for user_log in user_logs_serializer.data:
                 user_log['entity_name'] = driver_mapping.get(user_log['created_by'], '')
@@ -1379,11 +1378,10 @@ class AttendanceReports(APIView): #RETAILLLLLLLLLLL
         trip_ticket_id = request.query_params.get('trip_ticket_id')
         trip_ticket_del_to_id = request.query_params.get('trip_ticket_del_to_id')
         try:
-            branch_id_data = DeliverySequenceViewModel.objects.using(db_alias).filter(
-    trip_ticket_del_to_id=trip_ticket_del_to_id).values('branch_id').first()
-            branch_id = branch_id_data['branch_id']
-            print(branch_id)
-            user_logs = TripTicketBranchLogsModel.objects.using(db_alias).order_by('-log_id').filter(trip_ticket_id=trip_ticket_id, branch_id = branch_id)
+            #branch_id_data = DeliverySequenceViewModel.objects.using(db_alias).filter(trip_ticket_del_to_id=trip_ticket_del_to_id).values('branch_id').first()
+            #branch_id = branch_id_data['branch_id']
+            #print(branch_id)
+            user_logs = TripTicketBranchLogsModel.objects.using(db_alias).order_by('-log_id').filter(trip_ticket_id=trip_ticket_id, branch_id = trip_ticket_del_to_id)
         except ValueError:
             return Response({"error": "Invalid ID format."}, status=400)
         userlogs_serializer = BranchLogsSerializer(user_logs, many=True)
@@ -1469,6 +1467,7 @@ class ViewOutslipReport(APIView):
         if trip_ticket_detail_id:
             try:
                 upload_data = OutslipImagesModel.objects.using(db_alias).filter(trip_ticket_detail_id=trip_ticket_detail_id)
+                receiver = TripDetailsModel.objects.using(db_alias).filter(trip_ticket_detail_id=trip_ticket_detail_id).values_list('received_by', flat=True).first()
                 if not upload_data.exists():
                     return Response({"error": "Trip ticket Detail not found."}, status=404)
 
@@ -1528,6 +1527,7 @@ class ViewOutslipReport(APIView):
                         'branch_name': row.get('branch_name'),
                         'entity_id': row['entity_id'],
                         'entity_name': row['entity_name'],
+                        'received_by': receiver,
                 }
                 branches.add(row['branch_id'])
                 connection = connections[db_alias]

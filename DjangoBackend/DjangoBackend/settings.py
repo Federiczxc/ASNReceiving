@@ -144,10 +144,10 @@ DATABASES = {
  
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'bootstrap2_ret_training_052025',
+        'NAME': 'bootstrap2_ret',
         'USER': 'sa',
         'PASSWORD':'WTP9@!979#100420!9',
-        'HOST':'192.168.0.33\MSSQLTESTSERVER',
+        'HOST':'192.168.0.32',
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
             'extra_params': 'Encrypt=no;TrustServerCertificate=yes',
@@ -166,6 +166,8 @@ DATABASES = {
         },
         'BASE_URL': 'http://176.16.5.166:8000/tsl'
     }
+   
+    
 }
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

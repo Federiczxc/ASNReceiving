@@ -14,10 +14,7 @@ import Checkbox from 'expo-checkbox';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import BottomSheet, { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
 export default function OutslipUpload() {
-    const [tripBranch, setTripBranch] = useState({
-        branch_name: '',
-        branch_id: '',
-    });
+   
     const [outslipDetail, setOutslipDetail] = useState({
         trip_ticket_id: null,
         trip_ticket_detail_id: null,
@@ -159,7 +156,6 @@ export default function OutslipUpload() {
                 setQuantity(initialQuantities);
                 setSerialQuantities(initialSerialQuantities);
                 setOutslipDetail(response.data.tripdetails[0]);
-                setTripBranch(response.data.branches[0]);
                 console.log("out", response.data.tripdetails[0]);
                 setIsLoading(false);
                 /* console.log("OCLE", ocrResults.length) */
@@ -179,6 +175,7 @@ export default function OutslipUpload() {
         if (isLoadingMore) return;
         try {
             setIsLoadingMore(true);
+            console.log("ou2t", outslipDetail.branch_id);
             const response = await api.get('/receiverlist/', {
                 params: {
                     page: pageNum,
@@ -656,7 +653,7 @@ export default function OutslipUpload() {
                                 <View style={styles.ticketHeader}>
                                     <Text style={styles.tripId}>{outslipDetail.trans_name} #{outslipDetail.ref_trans_no}</Text>
                                     <Text style={styles.tripId2}>Trip Ticket Detail #{outslipDetail.trip_ticket_detail_id}</Text>
-                                    <Text style={styles.tripId3}>Branch Name: {tripBranch.branch_name}</Text>
+                                    <Text style={styles.tripId3}>Branch Name: {outslipDetail.branch_name}</Text>
                                 </View>
                                 <Ionicons
                                     name={isExpanded ? "chevron-down" : "chevron-forward"}
@@ -1074,7 +1071,7 @@ export default function OutslipUpload() {
                         onChangeText={setSearchQuery} />
                     <BottomSheetFlatList
                         data={receiverData}
-                        keyExtractor={(item) => item.branch_receiver_id.toString()}
+                        keyExtractor={(item) => item.branch_receiver_id?.toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 style={styles.receiverItem}
